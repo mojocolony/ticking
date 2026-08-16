@@ -1,8 +1,8 @@
 const STORAGE_KEY = 'ticking.prototype.v1';
-const CURRENT_VERSION = '0.3.6';
+const CURRENT_VERSION = '0.3.7';
 
 const seed = {
-  settings: { version: CURRENT_VERSION },
+  settings: { version: CURRENT_VERSION, readerFont: 'serif', readerSize: 18, readerBackground: 'paper' },
   dailySites: [
     { name: 'Fratello', url: 'https://www.fratellowatches.com/' },
     { name: 'Monochrome', url: 'https://monochrome-watches.com/' },
@@ -56,6 +56,56 @@ const seed = {
 };
 
 function clone(v) { return JSON.parse(JSON.stringify(v)); }
+function getReaderPrefs() {
+  const font = ['serif','sans','book'].includes(state?.settings?.readerFont) ? state.settings.readerFont : 'serif';
+  const size = Math.min(28, Math.max(15, Number(state?.settings?.readerSize) || 18));
+  const background = ['paper','white','sepia','dark'].includes(state?.settings?.readerBackground) ? state.settings.readerBackground : 'paper';
+  return { font, size, background };
+}
+function applyReaderPrefs(root) {
+  if (!root) return;
+  const prefs = getReaderPrefs();
+  const shell = root.querySelector('.reader-shell');
+  if (!shell) return;
+  shell.dataset.readerFont = prefs.font;
+  shell.dataset.readerBackground = prefs.background;
+  shell.style.setProperty('--reader-font-size', `${prefs.size}px`);
+  const font = root.querySelector('[data-reader-font]');
+  const size = root.querySelector('[data-reader-size]');
+  const sizeValue = root.querySelector('[data-reader-size-value]');
+  const background = root.querySelector('[data-reader-background]');
+  if (font) font.value = prefs.font;
+  if (size) size.value = String(prefs.size);
+  if (sizeValue) sizeValue.textContent = `${prefs.size}px`;
+  if (background) background.value = prefs.background;
+}
+function bindReaderControls(root) {
+  if (!root?.querySelector('.reader-shell')) return;
+  applyReaderPrefs(root);
+  root.querySelector('[data-reader-font]')?.addEventListener('change', (event) => {
+    state.settings.readerFont = event.target.value;
+    saveState(); applyReaderPrefs(root);
+  });
+  root.querySelector('[data-reader-size]')?.addEventListener('input', (event) => {
+    state.settings.readerSize = Number(event.target.value);
+    const value = root.querySelector('[data-reader-size-value]');
+    if (value) value.textContent = `${state.settings.readerSize}px`;
+    const shell = root.querySelector('.reader-shell');
+    shell?.style.setProperty('--reader-font-size', `${state.settings.readerSize}px`);
+  });
+  root.querySelector('[data-reader-size]')?.addEventListener('change', () => saveState());
+  root.querySelector('[data-reader-background]')?.addEventListener('change', (event) => {
+    state.settings.readerBackground = event.target.value;
+    saveState(); applyReaderPrefs(root);
+  });
+}
+function readerControls() {
+  return `<div class="reader-controls" aria-label="Reader appearance">
+    <label>Font<select data-reader-font><option value="serif">Serif</option><option value="book">Book</option><option value="sans">Sans</option></select></label>
+    <label class="reader-size-control"><span>Size</span><input type="range" min="15" max="28" step="1" data-reader-size><output data-reader-size-value>18px</output></label>
+    <label>Background<select data-reader-background><option value="paper">Paper</option><option value="white">White</option><option value="sepia">Sepia</option><option value="dark">Dark</option></select></label>
+  </div>`;
+}
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -570,7 +620,7 @@ function openSaved(item) {
   const d = document.getElementById('detailDialog');
   const readerMeta = [item.readerByline, item.readerPublishedTime ? fmtDate(item.readerPublishedTime) : ''].filter(Boolean).map(escapeHtml).join(' · ');
   const reader = item.type === 'Article' && item.articleState === 'ready' && item.readerHtml
-    ? `<section class="reader-shell">${item.readerExcerpt?`<p class="reader-deck">${escapeHtml(item.readerExcerpt)}</p>`:''}${readerMeta?`<p class="meta">${readerMeta}</p>`:''}<article class="reader-article">${item.readerHtml}</article></section>`
+    ? `<section class="reader-shell">${readerControls()}${item.readerExcerpt?`<p class="reader-deck">${escapeHtml(item.readerExcerpt)}</p>`:''}${readerMeta?`<p class="meta reader-meta">${readerMeta}</p>`:''}<article class="reader-article">${item.readerHtml}</article></section>`
     : '';
   const articleNotice = item.articleState === 'processing' ? '<div class="notice">Mozilla Readability is processing this article now.</div>'
     : item.articleState === 'pending' ? '<div class="notice">Reader capture is waiting for Ticking Cloud. Connect Supabase, then retry.</div>'
@@ -580,6 +630,7 @@ function openSaved(item) {
   d.querySelector('[data-toggle-read]')?.addEventListener('click',()=>{item.readStatus=item.readStatus==='Read'?'Unread':'Read'; saveState(); d.close(); render();});
   d.querySelector('[data-retry-reader]')?.addEventListener('click',()=>{d.close(); processArticleCapture(item);});
   d.showModal();
+  bindReaderControls(d);
   d.querySelectorAll('.reader-article img:not([data-media-path])').forEach(img=>{
     img.addEventListener('error',()=>img.remove(), { once:true });
   });
