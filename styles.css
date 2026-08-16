@@ -205,3 +205,6 @@ a { color: inherit; }
 .cloud-mobile { display: none; }
 @media (max-width: 900px) { .cloud-mobile { display: inline-flex; } }
 @media (max-width: 650px) { .cloud-mobile { padding-left: 10px; padding-right: 10px; } }
+
+.list-row[data-saved-row] { cursor: pointer; transition: border-color .15s ease, transform .15s ease; }
+.list-row[data-saved-row]:hover { border-color: color-mix(in srgb, var(--text) 25%, var(--line)); transform: translateY(-1px); }

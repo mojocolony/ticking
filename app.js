@@ -433,7 +433,7 @@ function renderHome() {
 
 function renderInbox() {
   if (!state.inbox.length) return `${header('Inbox','Capture')}<div class="empty">Inbox is clear.</div>`;
-  return `${header('Inbox','Capture')}<div class="list">${state.inbox.map(item=>listRow(escapeHtml(item.title || item.url), `${escapeHtml(item.type)} · ${escapeHtml(item.source || sourceFromUrl(item.url))} · saved ${fmtDate(item.savedAt)}`, `<button data-inbox-action="keep" data-id="${item.id}">Keep</button><button data-inbox-action="open" data-id="${item.id}">Open</button><button data-inbox-action="discard" data-id="${item.id}">Discard</button>`)).join('')}</div>`;
+  return `${header('Inbox','Capture')}<div class="list">${state.inbox.map(item=>listRow(escapeHtml(item.title || item.url), `${escapeHtml(item.type)} · ${escapeHtml(item.source || sourceFromUrl(item.url))} · saved ${fmtDate(item.savedAt)}${item.articleState==='processing'?' · Processing Reader…':''}${item.articleState==='pending'?' · Reader pending':''}${item.articleState==='error'?' · Reader error':''}`, `<button data-inbox-action="keep" data-id="${item.id}">Keep</button><button data-inbox-action="open" data-id="${item.id}">Open</button><button data-inbox-action="discard" data-id="${item.id}">Discard</button>`, `data-saved-row="inbox" data-saved-row-id="${item.id}"`)).join('')}</div>`;
 }
 
 function renderMyWatches() {
@@ -452,7 +452,7 @@ function renderReleases() {
   return `${header('Releases','Timeline')}<div class="list">${state.releases.slice().sort((a,b)=>(b.announcementDate||'').localeCompare(a.announcementDate||'')).map(r=>listRow(escapeHtml(r.title), `${escapeHtml(brandName(r.brandId))} · announced ${fmtDate(r.announcementDate)} · ${escapeHtml(r.type)} · ${formatPrice(r.price,r.currency)}`, `<button>${escapeHtml(r.status)}</button>`)).join('')}</div>`;
 }
 function renderLibrary() {
-  return `${header('Library','Saved research')}<div class="list">${state.library.map(item=>listRow(escapeHtml(item.title), `${escapeHtml(item.type)} · ${escapeHtml(item.source || sourceFromUrl(item.url))}${item.readStatus ? ` · ${escapeHtml(item.readStatus)}`:''}${item.articleState==='processing'?' · Processing Reader…':''}${item.articleState==='pending'?' · Reader pending':''}${item.articleState==='error'?' · Reader error':''}${item.screenshotState==='pending'?' · Screenshot capture pending':''}`, `<button data-library-open="${item.id}">Open</button>`)).join('')}</div>`;
+  return `${header('Library','Saved research')}<div class="list">${state.library.map(item=>listRow(escapeHtml(item.title), `${escapeHtml(item.type)} · ${escapeHtml(item.source || sourceFromUrl(item.url))}${item.readStatus ? ` · ${escapeHtml(item.readStatus)}`:''}${item.articleState==='processing'?' · Processing Reader…':''}${item.articleState==='pending'?' · Reader pending':''}${item.articleState==='error'?' · Reader error':''}${item.screenshotState==='pending'?' · Screenshot capture pending':''}`, `<button data-library-open="${item.id}">Open</button>`, `data-saved-row="library" data-saved-row-id="${item.id}"`)).join('')}</div>`;
 }
 function renderCollections() {
   return `${header('Collections','Research boards')}<div class="grid three">${state.collections.map(c=>`<div class="card"><div class="kicker">${c.itemCount} items</div><h3>${escapeHtml(c.name)}</h3><p class="meta">${escapeHtml(c.description)}</p></div>`).join('')}</div>`;
@@ -490,8 +490,13 @@ function wireContent() {
   content.querySelectorAll('[data-go]').forEach(x=>x.addEventListener('click',()=>{currentView=x.dataset.go;search.value='';render();}));
   content.querySelectorAll('[data-watch]').forEach(x=>x.addEventListener('click',()=>openWatch(x.dataset.watch)));
   content.querySelectorAll('[data-new-watch]').forEach(x=>x.addEventListener('click',()=>openWatchEditor()));
-  content.querySelectorAll('[data-inbox-action]').forEach(btn=>btn.addEventListener('click',()=>handleInbox(btn.dataset.inboxAction,btn.dataset.id)));
-  content.querySelectorAll('[data-library-open]').forEach(btn=>btn.addEventListener('click',()=>openSaved(state.library.find(x=>x.id===btn.dataset.libraryOpen))));
+  content.querySelectorAll('[data-inbox-action]').forEach(btn=>btn.addEventListener('click',(e)=>{e.stopPropagation();handleInbox(btn.dataset.inboxAction,btn.dataset.id);}));
+  content.querySelectorAll('[data-library-open]').forEach(btn=>btn.addEventListener('click',(e)=>{e.stopPropagation();openSaved(state.library.find(x=>x.id===btn.dataset.libraryOpen));}));
+  content.querySelectorAll('[data-saved-row]').forEach(row=>row.addEventListener('click',(e)=>{
+    if (e.target.closest('button, a')) return;
+    const pool = row.dataset.savedRow === 'inbox' ? state.inbox : state.library;
+    openSaved(pool.find(x=>x.id===row.dataset.savedRowId));
+  }));
   content.querySelectorAll('[data-reminder]').forEach(btn=>btn.addEventListener('click',()=>{ const r=state.reminders.find(x=>x.id===btn.dataset.reminder); r.done=!r.done; saveState(); render(); }));
   content.querySelectorAll('[data-saved-id]').forEach(btn=>btn.addEventListener('click',()=>{const pool=btn.dataset.savedBucket==='Inbox'?state.inbox:state.library; openSaved(pool.find(x=>x.id===btn.dataset.savedId));}));
 }
@@ -570,7 +575,7 @@ function handleInbox(action,id) {
     state.inbox=state.inbox.filter(x=>x.id!==id); saveState(); render();
   }
   if(action==='discard') { state.inbox=state.inbox.filter(x=>x.id!==id); saveState(); render(); }
-  if(action==='open') window.open(item.url,'_blank','noopener');
+  if(action==='open') openSaved(item);
 }
 
 function populateSelect(id, options, value='', includeBlank=true) {
