@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'ticking.prototype.v1';
-const CURRENT_VERSION = '0.3.4';
+const CURRENT_VERSION = '0.3.6';
 
 const seed = {
   settings: { version: CURRENT_VERSION },
@@ -289,6 +289,7 @@ async function processArticleCapture(item) {
     const { data, error } = await cloud.client.functions.invoke('capture-article', { body:{ url:item.url } });
     if (error) throw error;
     if (data?.error) throw new Error(data.error);
+    const oldMediaPaths = Array.isArray(item.readerMediaPaths) ? [...item.readerMediaPaths] : [];
     Object.assign(item, {
       title: data.title || item.title,
       url: data.sourceUrl || item.url,
@@ -298,10 +299,12 @@ async function processArticleCapture(item) {
       readerByline: data.byline || '',
       readerExcerpt: data.excerpt || '',
       readerPublishedTime: data.publishedTime || '',
+      readerMediaPaths: Array.isArray(data.mediaPaths) ? data.mediaPaths : [],
       articleState: 'ready',
       articleError: ''
     });
     saveState(); render();
+    if (oldMediaPaths.length) cloud.client.storage.from(MEDIA_BUCKET).remove(oldMediaPaths).catch(()=>{});
   } catch (error) {
     item.articleState = 'error'; item.articleError = error.message || String(error); saveState(); render();
   }
@@ -326,11 +329,17 @@ function setupCloudUI() {
   });
 }
 
-let currentView = 'Home';
+const VIEW_KEY = 'ticking.currentView';
+let currentView = localStorage.getItem(VIEW_KEY) || 'Home';
 let currentCaptureType = 'Link';
 let editorSelections = { types: new Set(), complications: new Set(), statuses: new Set() };
 
 const navItems = ['Home', 'Inbox', 'My Watches', 'Watches', 'Brands', 'Releases', 'Library', 'Collections', 'Reminders'];
+if (!navItems.includes(currentView)) currentView = 'Home';
+function setCurrentView(view) {
+  currentView = navItems.includes(view) ? view : 'Home';
+  localStorage.setItem(VIEW_KEY, currentView);
+}
 const nav = document.getElementById('nav');
 const content = document.getElementById('content');
 const search = document.getElementById('globalSearch');
@@ -375,7 +384,7 @@ function renderNav() {
     const short = item === 'My Watches' ? 'Mine' : item;
     return `<button data-view="${item}" data-short="${escapeHtml(short.slice(0,2))}" class="${currentView === item ? 'active' : ''}"><span>${item}</span><span class="count">${count}</span></button>`;
   }).join('');
-  nav.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => { currentView = btn.dataset.view; search.value=''; render(); }));
+  nav.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => { setCurrentView(btn.dataset.view); search.value=''; render(); }));
 }
 
 function header(title, eyebrow='Ticking', action='') {
@@ -487,7 +496,7 @@ function render() {
 }
 
 function wireContent() {
-  content.querySelectorAll('[data-go]').forEach(x=>x.addEventListener('click',()=>{currentView=x.dataset.go;search.value='';render();}));
+  content.querySelectorAll('[data-go]').forEach(x=>x.addEventListener('click',()=>{setCurrentView(x.dataset.go);search.value='';render();}));
   content.querySelectorAll('[data-watch]').forEach(x=>x.addEventListener('click',()=>openWatch(x.dataset.watch)));
   content.querySelectorAll('[data-new-watch]').forEach(x=>x.addEventListener('click',()=>openWatchEditor()));
   content.querySelectorAll('[data-inbox-action]').forEach(btn=>btn.addEventListener('click',(e)=>{e.stopPropagation();handleInbox(btn.dataset.inboxAction,btn.dataset.id);}));
@@ -524,9 +533,14 @@ function openWatch(id) {
   const w = state.watches.find(x=>x.id===id); if (!w) return;
   const own = state.myWatches.find(x=>x.watchId===id);
   const d = document.getElementById('detailDialog');
-  d.innerHTML = `<div class="dialog-inner"><div class="dialog-head"><div><div class="eyebrow">${escapeHtml(brandName(w.brandId))}</div><h2>${escapeHtml(w.model)}${w.variant?` · ${escapeHtml(w.variant)}`:''}</h2>${w.referenceNumber?`<div class="meta">Ref. ${escapeHtml(w.referenceNumber)}</div>`:''}</div><button class="icon-button" data-close>×</button></div>
+  const normalizedModel = String(w.model || '').replace(/^ref\.?\s*/i,'').trim().toLowerCase();
+  const normalizedRef = String(w.referenceNumber || '').replace(/^ref\.?\s*/i,'').trim().toLowerCase();
+  const refLabel = w.referenceNumber && normalizedRef !== normalizedModel
+    ? ( /^ref\.?\s/i.test(w.referenceNumber) ? w.referenceNumber : `Ref. ${w.referenceNumber}` )
+    : '';
+  d.innerHTML = `<div class="dialog-inner"><div class="dialog-head"><div><div class="eyebrow">${escapeHtml(brandName(w.brandId))}</div><h2>${escapeHtml(w.model)}${w.variant?` · ${escapeHtml(w.variant)}`:''}</h2>${refLabel?`<div class="meta">${escapeHtml(refLabel)}</div>`:''}</div><button class="icon-button" data-close>×</button></div>
     <div class="detail-toolbar"><button class="button secondary" data-edit-watch>Edit</button><button class="button secondary" data-own-watch>${own?'Edit My Watch':'Add to My Watches'}</button><button class="button secondary" data-share-watch>Share</button></div>
-    <div class="detail-hero"><div class="detail-image">${w.heroImagePath ? `<img class="media-image detail-media" data-media-path="${escapeHtml(w.heroImagePath)}" alt="${escapeHtml(watchLabel(w))}" />` : watchGlyph('watch-glyph hero')}</div><div><div class="pills">${(w.statuses||[]).map(s=>`<span class="pill strong">${escapeHtml(s)}</span>`).join('')}${(w.tags||[]).map(t=>`<span class="pill">${escapeHtml(t)}</span>`).join('')}</div><p>${escapeHtml(w.note || 'No personal note yet.')}</p>${w.officialUrl?`<p><a href="${escapeHtml(w.officialUrl)}" target="_blank" rel="noreferrer">Open official page ↗</a></p>`:''}</div></div>
+    <div class="detail-hero"><div class="detail-image">${w.heroImagePath ? `<img class="media-image detail-media" data-media-path="${escapeHtml(w.heroImagePath)}" alt="${escapeHtml(watchLabel(w))}" />` : watchGlyph('watch-glyph hero')}</div><div class="detail-copy"><div class="pills">${(w.statuses||[]).map(s=>`<span class="pill strong">${escapeHtml(s)}</span>`).join('')}${(w.tags||[]).map(t=>`<span class="pill">${escapeHtml(t)}</span>`).join('')}</div><p>${escapeHtml(w.note || 'No personal note yet.')}</p>${w.officialUrl?`<p><a href="${escapeHtml(w.officialUrl)}" target="_blank" rel="noreferrer">Open official page ↗</a></p>`:''}</div></div>
     <div class="specs">
       ${[
         ['Diameter',w.diameter?`${w.diameter} mm`:'—'],
@@ -561,11 +575,15 @@ function openSaved(item) {
   const articleNotice = item.articleState === 'processing' ? '<div class="notice">Mozilla Readability is processing this article now.</div>'
     : item.articleState === 'pending' ? '<div class="notice">Reader capture is waiting for Ticking Cloud. Connect Supabase, then retry.</div>'
     : item.articleState === 'error' ? `<div class="notice warning">Reader capture failed: ${escapeHtml(item.articleError || 'Unknown error')}</div>` : '';
-  d.innerHTML = `<div class="dialog-inner"><div class="dialog-head"><div><div class="eyebrow">${escapeHtml(item.type)}</div><h2>${escapeHtml(item.title)}</h2></div><button class="icon-button" data-close>×</button></div><p class="meta">${escapeHtml(item.source || sourceFromUrl(item.url))} · ${fmtDate(item.savedAt)}</p>${item.status?`<div class="pills"><span class="pill strong">${escapeHtml(item.status)}</span>${(item.tags||[]).map(t=>`<span class="pill">${escapeHtml(t)}</span>`).join('')}</div>`:''}${item.selectedText?`<div class="card quote-card"><p>${escapeHtml(item.selectedText)}</p></div>`:''}${item.note?`<div class="card"><div class="kicker">Note</div>${escapeHtml(item.note)}</div>`:''}${articleNotice}${reader}${item.screenshotState==='pending'?`<div class="notice">Full-page screenshot capture is queued for the hosted capture service, where it will be compressed before upload.</div>`:''}<div class="dialog-actions">${item.readStatus?`<button class="button secondary" data-toggle-read>${item.readStatus==='Read'?'Mark unread':'Mark read'}</button>`:''}${item.type==='Article' && item.articleState!=='ready'?`<button class="button secondary" data-retry-reader>Retry Reader</button>`:''}${item.url?`<a class="button primary link-button" href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">Open original page ↗</a>`:''}</div></div>`;
+  d.innerHTML = `<div class="dialog-inner"><div class="dialog-head"><div><div class="eyebrow">${escapeHtml(item.type)}</div><h2>${escapeHtml(item.title)}</h2></div><button class="icon-button" data-close>×</button></div><p class="meta">${escapeHtml(item.source || sourceFromUrl(item.url))} · ${fmtDate(item.savedAt)}</p>${item.status?`<div class="pills"><span class="pill strong">${escapeHtml(item.status)}</span>${(item.tags||[]).map(t=>`<span class="pill">${escapeHtml(t)}</span>`).join('')}</div>`:''}${item.selectedText?`<div class="card quote-card"><p>${escapeHtml(item.selectedText)}</p></div>`:''}${item.note?`<div class="card"><div class="kicker">Note</div>${escapeHtml(item.note)}</div>`:''}${articleNotice}${reader}${item.screenshotState==='pending'?`<div class="notice">Full-page screenshot capture is queued for the hosted capture service, where it will be compressed before upload.</div>`:''}<div class="dialog-actions">${item.readStatus?`<button class="button secondary" data-toggle-read>${item.readStatus==='Read'?'Mark unread':'Mark read'}</button>`:''}${item.type==='Article'?`<button class="button secondary" data-retry-reader>${item.articleState==='ready'?'Refresh Reader':'Retry Reader'}</button>`:''}${item.url?`<a class="button primary link-button" href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">Open original page ↗</a>`:''}</div></div>`;
   d.querySelector('[data-close]').addEventListener('click',()=>d.close());
   d.querySelector('[data-toggle-read]')?.addEventListener('click',()=>{item.readStatus=item.readStatus==='Read'?'Unread':'Read'; saveState(); d.close(); render();});
   d.querySelector('[data-retry-reader]')?.addEventListener('click',()=>{d.close(); processArticleCapture(item);});
   d.showModal();
+  d.querySelectorAll('.reader-article img:not([data-media-path])').forEach(img=>{
+    img.addEventListener('error',()=>img.remove(), { once:true });
+  });
+  hydrateMediaImages(d);
 }
 
 function handleInbox(action,id) {

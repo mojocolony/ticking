@@ -141,8 +141,11 @@ a { color: inherit; }
 .check-line input { width: auto; margin: 0; }
 
 .detail-toolbar { display: flex; gap: 7px; flex-wrap: wrap; margin: -5px 0 18px; }
-.detail-hero { display: grid; grid-template-columns: 180px 1fr; gap: 20px; }
-.detail-image { min-height: 220px; aspect-ratio: 1 / 1; overflow: hidden; border-radius: 13px; background: var(--surface-2); display: grid; place-items: center; color: var(--muted); }
+.detail-hero { display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 1fr); gap: 22px; align-items: start; }
+.detail-image { width: 100%; min-width: 0; min-height: 0; aspect-ratio: 1 / 1; overflow: hidden; border-radius: 13px; background: var(--surface-2); display: grid; place-items: center; color: var(--muted); }
+.detail-copy { min-width: 0; padding-top: 2px; }
+.detail-copy .pills { margin-top: 0; }
+.detail-copy p { line-height: 1.45; }
 .detail-image .media-image { width: 100%; height: 100%; object-fit: contain; object-position: center; padding: 16px; background: transparent; }
 .watch-glyph.hero { width: 82px; height: 82px; stroke-width: 1.35; }
 .specs { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 9px; margin-top: 18px; }
@@ -198,7 +201,9 @@ a { color: inherit; }
 .reader-deck { font-size: 17px; line-height: 1.55; color: var(--muted); margin: 0 0 8px; }
 .reader-article { max-width: 690px; margin: 24px auto 8px; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; line-height: 1.72; }
 .reader-article h1, .reader-article h2, .reader-article h3, .reader-article h4 { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.2; }
-.reader-article img, .reader-article picture, .reader-article figure { max-width: 100%; height: auto; }
+.reader-article img { display: block; max-width: 100%; width: auto; height: auto; margin: 1.4em auto; border-radius: 8px; }
+.reader-article img[data-media-path] { width: 100%; }
+.reader-article picture, .reader-article figure { max-width: 100%; height: auto; }
 .reader-article figure { margin-left: 0; margin-right: 0; }
 .reader-article blockquote { margin: 1.2em 0; padding-left: 1em; border-left: 3px solid var(--line); color: var(--muted); }
 .reader-article a { text-decoration-thickness: 1px; text-underline-offset: 2px; }
