@@ -1,8 +1,8 @@
 const STORAGE_KEY = 'ticking.prototype.v1';
-const CURRENT_VERSION = '0.3.7';
+const CURRENT_VERSION = '0.3.10';
 
 const seed = {
-  settings: { version: CURRENT_VERSION, readerFont: 'serif', readerSize: 18, readerBackground: 'paper' },
+  settings: { version: CURRENT_VERSION, readerFont: 'Lora', readerCustomFont: '', readerSize: 18, readerBackground: 'paper', readerWidth: 720, readerMargin: 24, readerLineHeight: 1.7 },
   dailySites: [
     { name: 'Fratello', url: 'https://www.fratellowatches.com/' },
     { name: 'Monochrome', url: 'https://monochrome-watches.com/' },
@@ -56,28 +56,75 @@ const seed = {
 };
 
 function clone(v) { return JSON.parse(JSON.stringify(v)); }
+const READER_FONTS = [
+  { value: 'Lora', label: 'Lora', stack: "'Lora', Georgia, serif" },
+  { value: 'Playfair Display', label: 'Playfair Display', stack: "'Playfair Display', Georgia, serif" },
+  { value: 'Literata', label: 'Literata', stack: "'Literata', Georgia, serif" },
+  { value: 'Bookerly', label: 'Bookerly', stack: "'Bookerly', 'Lora', Georgia, serif" },
+  { value: 'Cormorant Garamond', label: 'Cormorant Garamond', stack: "'Cormorant Garamond', Garamond, Georgia, serif" },
+  { value: 'Crimson Text', label: 'Crimson Text', stack: "'Crimson Text', Georgia, serif" },
+  { value: 'Lancelot', label: 'Lancelot', stack: "'Lancelot', Georgia, serif" },
+  { value: 'Lyon', label: 'Lyon', stack: "'Lyon Text', 'Lyon', 'Lora', Georgia, serif" }
+];
+function cleanFontName(value) {
+  return String(value || '').replace(/["'`;{}\\]/g, '').trim().slice(0, 80);
+}
+function readerFontStack(font) {
+  return READER_FONTS.find(item => item.value === font)?.stack || "'Lora', Georgia, serif";
+}
 function getReaderPrefs() {
-  const font = ['serif','sans','book'].includes(state?.settings?.readerFont) ? state.settings.readerFont : 'serif';
-  const size = Math.min(28, Math.max(15, Number(state?.settings?.readerSize) || 18));
+  const legacyMap = { serif: 'Lora', book: 'Literata', sans: 'Lora', Georgia: 'Lora', Palatino: 'Literata', Baskerville: 'Lora', Charter: 'Literata', 'Times New Roman': 'Lora', 'Avenir Next': 'Lora', 'Helvetica Neue': 'Lora', Optima: 'Lora', Verdana: 'Lora', 'System Sans': 'Lora' };
+  let font = legacyMap[state?.settings?.readerFont] || state?.settings?.readerFont || 'Lora';
+  if (font === 'custom') {
+    const priorCustom = cleanFontName(state?.settings?.readerCustomFont || '');
+    const match = READER_FONTS.find(item => item.value.toLowerCase() === priorCustom.toLowerCase());
+    font = match?.value || 'Lora';
+  }
+  if (!READER_FONTS.some(item => item.value === font)) font = 'Lora';
+  const customFont = '';
+  const size = Math.min(32, Math.max(14, Number(state?.settings?.readerSize) || 18));
   const background = ['paper','white','sepia','dark'].includes(state?.settings?.readerBackground) ? state.settings.readerBackground : 'paper';
-  return { font, size, background };
+  const width = Math.min(1040, Math.max(500, Number(state?.settings?.readerWidth) || 720));
+  const rawMargin = Number(state?.settings?.readerMargin);
+  const margin = Math.min(100, Math.max(0, Number.isFinite(rawMargin) ? rawMargin : 24));
+  const lineHeight = Math.min(2.3, Math.max(1.2, Number(state?.settings?.readerLineHeight) || 1.7));
+  return { font, customFont, size, background, width, margin, lineHeight };
 }
 function applyReaderPrefs(root) {
   if (!root) return;
   const prefs = getReaderPrefs();
   const shell = root.querySelector('.reader-shell');
   if (!shell) return;
-  shell.dataset.readerFont = prefs.font;
   shell.dataset.readerBackground = prefs.background;
   shell.style.setProperty('--reader-font-size', `${prefs.size}px`);
+  shell.style.setProperty('--reader-font-family', readerFontStack(prefs.font));
+  shell.style.setProperty('--reader-column-width', `${prefs.width}px`);
+  shell.style.setProperty('--reader-side-margin', `${prefs.margin}px`);
+  shell.style.setProperty('--reader-line-height', String(prefs.lineHeight));
+  const dialog = shell.closest('.detail-dialog');
+  if (dialog) dialog.style.setProperty('--reader-dialog-width', `${Math.min(1180, prefs.width + 150)}px`);
+
   const font = root.querySelector('[data-reader-font]');
   const size = root.querySelector('[data-reader-size]');
   const sizeValue = root.querySelector('[data-reader-size-value]');
   const background = root.querySelector('[data-reader-background]');
+  const width = root.querySelector('[data-reader-width]');
+  const widthValue = root.querySelector('[data-reader-width-value]');
+  const margin = root.querySelector('[data-reader-margin]');
+  const marginValue = root.querySelector('[data-reader-margin-value]');
+  const line = root.querySelector('[data-reader-line-height]');
+  const lineValue = root.querySelector('[data-reader-line-height-value]');
+
   if (font) font.value = prefs.font;
   if (size) size.value = String(prefs.size);
   if (sizeValue) sizeValue.textContent = `${prefs.size}px`;
   if (background) background.value = prefs.background;
+  if (width) width.value = String(prefs.width);
+  if (widthValue) widthValue.textContent = `${prefs.width}px`;
+  if (margin) margin.value = String(prefs.margin);
+  if (marginValue) marginValue.textContent = `${prefs.margin}px`;
+  if (line) line.value = String(prefs.lineHeight);
+  if (lineValue) lineValue.textContent = prefs.lineHeight.toFixed(2).replace(/0$/, '');
 }
 function bindReaderControls(root) {
   if (!root?.querySelector('.reader-shell')) return;
@@ -87,23 +134,34 @@ function bindReaderControls(root) {
     saveState(); applyReaderPrefs(root);
   });
   root.querySelector('[data-reader-size]')?.addEventListener('input', (event) => {
-    state.settings.readerSize = Number(event.target.value);
-    const value = root.querySelector('[data-reader-size-value]');
-    if (value) value.textContent = `${state.settings.readerSize}px`;
-    const shell = root.querySelector('.reader-shell');
-    shell?.style.setProperty('--reader-font-size', `${state.settings.readerSize}px`);
+    state.settings.readerSize = Number(event.target.value); applyReaderPrefs(root);
   });
   root.querySelector('[data-reader-size]')?.addEventListener('change', () => saveState());
   root.querySelector('[data-reader-background]')?.addEventListener('change', (event) => {
-    state.settings.readerBackground = event.target.value;
-    saveState(); applyReaderPrefs(root);
+    state.settings.readerBackground = event.target.value; saveState(); applyReaderPrefs(root);
   });
+  root.querySelector('[data-reader-width]')?.addEventListener('input', (event) => {
+    state.settings.readerWidth = Number(event.target.value); applyReaderPrefs(root);
+  });
+  root.querySelector('[data-reader-width]')?.addEventListener('change', () => saveState());
+  root.querySelector('[data-reader-margin]')?.addEventListener('input', (event) => {
+    state.settings.readerMargin = Number(event.target.value); applyReaderPrefs(root);
+  });
+  root.querySelector('[data-reader-margin]')?.addEventListener('change', () => saveState());
+  root.querySelector('[data-reader-line-height]')?.addEventListener('input', (event) => {
+    state.settings.readerLineHeight = Number(event.target.value); applyReaderPrefs(root);
+  });
+  root.querySelector('[data-reader-line-height]')?.addEventListener('change', () => saveState());
 }
 function readerControls() {
+  const fontOptions = READER_FONTS.map(item => `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`).join('');
   return `<div class="reader-controls" aria-label="Reader appearance">
-    <label>Font<select data-reader-font><option value="serif">Serif</option><option value="book">Book</option><option value="sans">Sans</option></select></label>
-    <label class="reader-size-control"><span>Size</span><input type="range" min="15" max="28" step="1" data-reader-size><output data-reader-size-value>18px</output></label>
+    <label>Font<select data-reader-font>${fontOptions}</select></label>
     <label>Background<select data-reader-background><option value="paper">Paper</option><option value="white">White</option><option value="sepia">Sepia</option><option value="dark">Dark</option></select></label>
+    <label class="reader-range-control"><span>Size</span><input type="range" min="14" max="32" step="1" data-reader-size><output data-reader-size-value>18px</output></label>
+    <label class="reader-range-control"><span>Width</span><input type="range" min="500" max="1040" step="10" data-reader-width><output data-reader-width-value>720px</output></label>
+    <label class="reader-range-control"><span>Side margin</span><input type="range" min="0" max="100" step="2" data-reader-margin><output data-reader-margin-value>24px</output></label>
+    <label class="reader-range-control"><span>Line spacing</span><input type="range" min="1.2" max="2.3" step="0.05" data-reader-line-height><output data-reader-line-height-value>1.7</output></label>
   </div>`;
 }
 function loadState() {
