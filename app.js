@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'ticking.prototype.v1';
-const CURRENT_VERSION = '0.3.10';
+const CURRENT_VERSION = '0.3.11';
 
 const seed = {
   settings: { version: CURRENT_VERSION, readerFont: 'Lora', readerCustomFont: '', readerSize: 18, readerBackground: 'paper', readerWidth: 720, readerMargin: 24, readerLineHeight: 1.7 },
@@ -64,7 +64,8 @@ const READER_FONTS = [
   { value: 'Cormorant Garamond', label: 'Cormorant Garamond', stack: "'Cormorant Garamond', Garamond, Georgia, serif" },
   { value: 'Crimson Text', label: 'Crimson Text', stack: "'Crimson Text', Georgia, serif" },
   { value: 'Lancelot', label: 'Lancelot', stack: "'Lancelot', Georgia, serif" },
-  { value: 'Lyon', label: 'Lyon', stack: "'Lyon Text', 'Lyon', 'Lora', Georgia, serif" }
+  { value: 'Lyon', label: 'Lyon', stack: "'Lyon Text', 'Lyon', 'Lora', Georgia, serif" },
+  { value: 'Noto Serif', label: 'Noto Serif', stack: "'Noto Serif', 'Lora', Georgia, serif" }
 ];
 function cleanFontName(value) {
   return String(value || '').replace(/["'`;{}\\]/g, '').trim().slice(0, 80);
@@ -129,6 +130,22 @@ function applyReaderPrefs(root) {
 function bindReaderControls(root) {
   if (!root?.querySelector('.reader-shell')) return;
   applyReaderPrefs(root);
+  const toggle = root.querySelector('[data-reader-settings-toggle]');
+  const popover = root.querySelector('[data-reader-settings]');
+  const setOpen = (open) => {
+    if (!toggle || !popover) return;
+    popover.classList.toggle('hidden', !open);
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    toggle.classList.toggle('active', open);
+  };
+  toggle?.addEventListener('click', (event) => {
+    event.stopPropagation();
+    setOpen(popover?.classList.contains('hidden'));
+  });
+  popover?.addEventListener('click', event => event.stopPropagation());
+  root.addEventListener('click', event => {
+    if (!event.target.closest('[data-reader-settings-toggle]') && !event.target.closest('[data-reader-settings]')) setOpen(false);
+  });
   root.querySelector('[data-reader-font]')?.addEventListener('change', (event) => {
     state.settings.readerFont = event.target.value;
     saveState(); applyReaderPrefs(root);
@@ -155,13 +172,15 @@ function bindReaderControls(root) {
 }
 function readerControls() {
   const fontOptions = READER_FONTS.map(item => `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`).join('');
-  return `<div class="reader-controls" aria-label="Reader appearance">
-    <label>Font<select data-reader-font>${fontOptions}</select></label>
-    <label>Background<select data-reader-background><option value="paper">Paper</option><option value="white">White</option><option value="sepia">Sepia</option><option value="dark">Dark</option></select></label>
-    <label class="reader-range-control"><span>Size</span><input type="range" min="14" max="32" step="1" data-reader-size><output data-reader-size-value>18px</output></label>
-    <label class="reader-range-control"><span>Width</span><input type="range" min="500" max="1040" step="10" data-reader-width><output data-reader-width-value>720px</output></label>
-    <label class="reader-range-control"><span>Side margin</span><input type="range" min="0" max="100" step="2" data-reader-margin><output data-reader-margin-value>24px</output></label>
-    <label class="reader-range-control"><span>Line spacing</span><input type="range" min="1.2" max="2.3" step="0.05" data-reader-line-height><output data-reader-line-height-value>1.7</output></label>
+  return `<div class="reader-settings-popover hidden" data-reader-settings aria-label="Reader appearance">
+    <div class="reader-controls">
+      <label>Font<select data-reader-font>${fontOptions}</select></label>
+      <label>Background<select data-reader-background><option value="paper">Paper</option><option value="white">White</option><option value="sepia">Sepia</option><option value="dark">Dark</option></select></label>
+      <label class="reader-range-control"><span>Size</span><input type="range" min="14" max="32" step="1" data-reader-size><output data-reader-size-value>18px</output></label>
+      <label class="reader-range-control"><span>Width</span><input type="range" min="500" max="1040" step="10" data-reader-width><output data-reader-width-value>720px</output></label>
+      <label class="reader-range-control"><span>Side margin</span><input type="range" min="0" max="100" step="2" data-reader-margin><output data-reader-margin-value>24px</output></label>
+      <label class="reader-range-control"><span>Line spacing</span><input type="range" min="1.2" max="2.3" step="0.05" data-reader-line-height><output data-reader-line-height-value>1.7</output></label>
+    </div>
   </div>`;
 }
 function loadState() {
@@ -389,6 +408,56 @@ async function hydrateMediaImages(root=document) {
     img.src = URL.createObjectURL(data);
   }));
 }
+function formatBytes(bytes) {
+  const value = Math.max(0, Number(bytes) || 0);
+  if (value < 1024) return `${value} B`;
+  const units = ['KB','MB','GB','TB'];
+  let amount = value / 1024; let unit = units[0];
+  for (let i=1; i<units.length && amount >= 1024; i++) { amount /= 1024; unit = units[i]; }
+  return `${amount < 10 ? amount.toFixed(1) : amount.toFixed(0)} ${unit}`;
+}
+async function getStorageUsage() {
+  if (!cloudReady()) throw new Error('Sign in to Ticking Cloud first.');
+  let bytes = 0; let files = 0;
+  const walk = async (path, depth=0) => {
+    if (depth > 8) return;
+    let offset = 0;
+    while (true) {
+      const { data, error } = await cloud.client.storage.from(MEDIA_BUCKET).list(path, { limit: 1000, offset, sortBy:{ column:'name', order:'asc' } });
+      if (error) throw error;
+      const rows = data || [];
+      for (const item of rows) {
+        const size = Number(item.metadata?.size);
+        if (Number.isFinite(size)) { bytes += size; files += 1; }
+        else if (item.name && item.name !== '.emptyFolderPlaceholder') await walk(path ? `${path}/${item.name}` : item.name, depth + 1);
+      }
+      if (rows.length < 1000) break;
+      offset += rows.length;
+    }
+  };
+  await walk(cloud.user.id);
+  return { bytes, files };
+}
+async function refreshStorageUsage() {
+  const text = document.getElementById('storageUsageText');
+  const bar = document.getElementById('storageUsageBar');
+  const detail = document.getElementById('storageUsageDetail');
+  if (!text || !bar || !detail) return;
+  if (!cloudReady()) { text.textContent = 'Sign in to see storage usage.'; detail.textContent = ''; bar.style.width = '0%'; return; }
+  text.textContent = 'Checking storage…'; detail.textContent = '';
+  try {
+    const usage = await getStorageUsage();
+    const quota = 1024 * 1024 * 1024;
+    const percent = Math.min(100, usage.bytes / quota * 100);
+    text.textContent = `${formatBytes(usage.bytes)} of 1 GB`;
+    detail.textContent = `${usage.files} file${usage.files === 1 ? '' : 's'} · ${percent < 0.1 ? '<0.1' : percent.toFixed(1)}% used`;
+    bar.style.width = `${Math.max(percent, usage.bytes ? .35 : 0)}%`;
+  } catch (error) {
+    text.textContent = 'Storage usage unavailable';
+    detail.textContent = error.message || String(error);
+    bar.style.width = '0%';
+  }
+}
 async function processArticleCapture(item) {
   if (!item || item.type !== 'Article' || !item.url) return;
   if (!cloudReady()) { item.articleState = 'pending'; saveState(); return; }
@@ -420,7 +489,7 @@ async function processArticleCapture(item) {
 function setupCloudUI() {
   const d = document.getElementById('cloudDialog');
   const openCloudDialog = ()=>{
-    const cfg=getCloudConfig(); document.getElementById('cloudUrl').value=cfg.url||''; document.getElementById('cloudKey').value=cfg.key||''; updateCloudUI(); d.showModal();
+    const cfg=getCloudConfig(); document.getElementById('cloudUrl').value=cfg.url||''; document.getElementById('cloudKey').value=cfg.key||''; updateCloudUI(); d.showModal(); if (cloudReady()) refreshStorageUsage();
   };
   document.getElementById('cloudStatus')?.addEventListener('click',openCloudDialog);
   document.getElementById('cloudStatusMobile')?.addEventListener('click',openCloudDialog);
@@ -431,6 +500,7 @@ function setupCloudUI() {
   document.getElementById('cloudSignIn')?.addEventListener('click',signInCloud);
   document.getElementById('cloudSignUp')?.addEventListener('click',signUpCloud);
   document.getElementById('cloudSignOut')?.addEventListener('click',signOutCloud);
+  document.getElementById('refreshStorageUsage')?.addEventListener('click',refreshStorageUsage);
   document.getElementById('cloudSync')?.addEventListener('click',()=>cloudSaveNow({quiet:false}));
   document.getElementById('cloudLoad')?.addEventListener('click',async()=>{
     if (confirm('Load the Supabase copy and replace this browser’s current Ticking data?')) await loadCloudState({quiet:false});
@@ -683,7 +753,7 @@ function openSaved(item) {
   const articleNotice = item.articleState === 'processing' ? '<div class="notice">Mozilla Readability is processing this article now.</div>'
     : item.articleState === 'pending' ? '<div class="notice">Reader capture is waiting for Ticking Cloud. Connect Supabase, then retry.</div>'
     : item.articleState === 'error' ? `<div class="notice warning">Reader capture failed: ${escapeHtml(item.articleError || 'Unknown error')}</div>` : '';
-  d.innerHTML = `<div class="dialog-inner"><div class="dialog-head"><div><div class="eyebrow">${escapeHtml(item.type)}</div><h2>${escapeHtml(item.title)}</h2></div><button class="icon-button" data-close>×</button></div><p class="meta">${escapeHtml(item.source || sourceFromUrl(item.url))} · ${fmtDate(item.savedAt)}</p>${item.status?`<div class="pills"><span class="pill strong">${escapeHtml(item.status)}</span>${(item.tags||[]).map(t=>`<span class="pill">${escapeHtml(t)}</span>`).join('')}</div>`:''}${item.selectedText?`<div class="card quote-card"><p>${escapeHtml(item.selectedText)}</p></div>`:''}${item.note?`<div class="card"><div class="kicker">Note</div>${escapeHtml(item.note)}</div>`:''}${articleNotice}${reader}${item.screenshotState==='pending'?`<div class="notice">Full-page screenshot capture is queued for the hosted capture service, where it will be compressed before upload.</div>`:''}<div class="dialog-actions">${item.readStatus?`<button class="button secondary" data-toggle-read>${item.readStatus==='Read'?'Mark unread':'Mark read'}</button>`:''}${item.type==='Article'?`<button class="button secondary" data-retry-reader>${item.articleState==='ready'?'Refresh Reader':'Retry Reader'}</button>`:''}${item.url?`<a class="button primary link-button" href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">Open original page ↗</a>`:''}</div></div>`;
+  d.innerHTML = `<div class="dialog-inner"><div class="dialog-head"><div><div class="eyebrow">${escapeHtml(item.type)}</div><h2>${escapeHtml(item.title)}</h2></div><div class="reader-head-actions">${reader?`<button class="reader-aa-button" type="button" data-reader-settings-toggle aria-label="Reader appearance" aria-expanded="false">Aa</button>`:''}<button class="icon-button" data-close aria-label="Close">×</button></div></div><p class="meta">${escapeHtml(item.source || sourceFromUrl(item.url))} · ${fmtDate(item.savedAt)}</p>${item.status?`<div class="pills"><span class="pill strong">${escapeHtml(item.status)}</span>${(item.tags||[]).map(t=>`<span class="pill">${escapeHtml(t)}</span>`).join('')}</div>`:''}${item.selectedText?`<div class="card quote-card"><p>${escapeHtml(item.selectedText)}</p></div>`:''}${item.note?`<div class="card"><div class="kicker">Note</div>${escapeHtml(item.note)}</div>`:''}${articleNotice}${reader}${item.screenshotState==='pending'?`<div class="notice">Full-page screenshot capture is queued for the hosted capture service, where it will be compressed before upload.</div>`:''}<div class="dialog-actions">${item.readStatus?`<button class="button secondary" data-toggle-read>${item.readStatus==='Read'?'Mark unread':'Mark read'}</button>`:''}${item.type==='Article'?`<button class="button secondary" data-retry-reader>${item.articleState==='ready'?'Refresh Reader':'Retry Reader'}</button>`:''}${item.url?`<a class="button primary link-button" href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">Open original page ↗</a>`:''}</div></div>`;
   d.querySelector('[data-close]').addEventListener('click',()=>d.close());
   d.querySelector('[data-toggle-read]')?.addEventListener('click',()=>{item.readStatus=item.readStatus==='Read'?'Unread':'Read'; saveState(); d.close(); render();});
   d.querySelector('[data-retry-reader]')?.addEventListener('click',()=>{d.close(); processArticleCapture(item);});
