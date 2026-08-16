@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="theme-color" content="#22251d" />
+  <title>Ticking</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand-block">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" class="lucide-watch"><path d="M12 10v2.2l1.6 1m2.53-5.54-.81-4.05a2 2 0 0 0-2-1.61h-2.68a2 2 0 0 0-2 1.61l-.78 4.05m.02 8.7.8 4a2 2 0 0 0 2 1.61h2.72a2 2 0 0 0 2-1.61l.81-4.05"/><circle cx="12" cy="12" r="6"/></svg>
+        </div>
+        <div>
+          <div class="brand-name">Ticking</div>
+          <div class="build">prototype 0.3.4</div>
+        </div>
+      </div>
+
+      <nav id="nav" class="nav"></nav>
+
+      <div class="sidebar-footer">
+        <button class="button secondary full cloud-button" id="cloudStatus">Cloud: Local</button>
+        <button class="button secondary full" id="bookmarkletHelp">Bookmarklet</button>
+        <button class="button ghost full" id="exportAll">Export data</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="search-wrap">
+          <span class="search-icon">⌕</span>
+          <input id="globalSearch" type="search" placeholder="Search Ticking" autocomplete="off" />
+        </div>
+        <button class="button secondary cloud-mobile" id="cloudStatusMobile" aria-label="Ticking Cloud">Cloud</button>
+        <button class="button primary" id="openCapture">+ Save</button>
+      </header>
+
+      <div id="content" class="content"></div>
+    </main>
+  </div>
+
+  <dialog id="captureDialog" class="dialog capture-dialog">
+    <form method="dialog" id="captureForm">
+      <div class="dialog-head">
+        <div>
+          <div class="eyebrow">Capture</div>
+          <h2>Save to Ticking</h2>
+        </div>
+        <button value="cancel" class="icon-button" aria-label="Close">×</button>
+      </div>
+
+      <label>URL
+        <input id="captureUrl" type="url" placeholder="https://…" />
+      </label>
+      <div id="duplicateNotice" class="notice warning hidden"></div>
+      <label>Title
+        <input id="captureTitle" type="text" placeholder="Page title" />
+      </label>
+
+      <fieldset>
+        <legend>Save as</legend>
+        <div class="segmented" id="captureType">
+          <button type="button" data-type="Link" class="active">Link</button>
+          <button type="button" data-type="Article">Article</button>
+          <button type="button" data-type="Full Page">Full Page</button>
+          <button type="button" data-type="Snippet">Snippet</button>
+          <button type="button" data-type="Reference">Reference</button>
+        </div>
+      </fieldset>
+
+      <label id="selectionWrap" class="hidden">Selected text
+        <textarea id="captureSelection" rows="4"></textarea>
+      </label>
+
+      <div class="grid two">
+        <label>Brand
+          <input id="captureBrand" list="brandOptions" placeholder="Search or create…" />
+        </label>
+        <label>Watch
+          <input id="captureWatch" list="watchOptions" placeholder="Search existing watch…" />
+        </label>
+      </div>
+
+      <div class="grid two">
+        <label>Status
+          <select id="captureStatus"></select>
+        </label>
+        <label>Tags
+          <input id="captureTags" list="tagOptions" placeholder="Choose or type, comma separated" />
+        </label>
+      </div>
+      <div id="captureTagQuickPicker" class="choice-pills compact"></div>
+
+      <label>Note
+        <textarea id="captureNote" rows="3" placeholder="Optional"></textarea>
+      </label>
+
+      <div id="articleNotice" class="notice hidden">
+        Article capture uses Mozilla Readability when Ticking Cloud is connected. Without Cloud, the item is saved safely and marked pending.
+      </div>
+      <div id="screenshotNotice" class="notice hidden">
+        Full Page capture is reserved for the hosted/browser-integrated build. When enabled, Ticking will compress the capture automatically before storing it.
+      </div>
+
+      <div class="dialog-actions">
+        <button type="button" class="button secondary" id="saveLibrary">Save to Library</button>
+        <button type="submit" class="button primary" id="saveInbox">Save to Inbox</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="watchEditorDialog" class="dialog editor-dialog">
+    <form method="dialog" id="watchEditorForm">
+      <input type="hidden" id="watchEditId" />
+      <div class="dialog-head">
+        <div>
+          <div class="eyebrow">Watch record</div>
+          <h2 id="watchEditorTitle">New watch</h2>
+        </div>
+        <button value="cancel" class="icon-button" aria-label="Close">×</button>
+      </div>
+
+      <div class="grid two">
+        <label>Brand
+          <input id="watchBrand" list="brandOptions" placeholder="Choose or create…" required />
+        </label>
+        <label>Model
+          <input id="watchModel" type="text" placeholder="Model name" required />
+        </label>
+      </div>
+
+      <div class="grid two">
+        <label>Variant / colourway
+          <input id="watchVariant" type="text" placeholder="Optional" />
+        </label>
+        <label>Reference
+          <input id="watchReference" type="text" placeholder="Optional" />
+        </label>
+      </div>
+
+      <label>Official page
+        <input id="watchOfficialUrl" type="url" placeholder="https://…" />
+      </label>
+
+      <div class="grid two">
+        <label>Hero image
+          <input id="watchHeroImage" type="file" accept="image/jpeg,image/png,image/webp,image/avif" />
+          <span class="field-help">Uploads to your private Ticking Storage bucket when Cloud is connected.</span>
+        </label>
+        <div id="watchHeroImageState" class="upload-state"></div>
+      </div>
+
+      <div class="grid three">
+        <label>Movement
+          <input id="watchMovement" list="movementOptions" placeholder="Choose or create…" />
+        </label>
+        <label>Case material
+          <select id="watchMaterial"></select>
+        </label>
+        <label>Crystal
+          <select id="watchCrystal"></select>
+        </label>
+      </div>
+
+      <fieldset>
+        <legend>Watch type</legend>
+        <div id="watchTypePicker" class="choice-pills"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Complications</legend>
+        <div id="watchComplicationPicker" class="choice-pills"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>My status</legend>
+        <div id="watchStatusPicker" class="choice-pills"></div>
+      </fieldset>
+
+      <div class="grid four">
+        <label>Diameter (mm)
+          <input id="watchDiameter" type="number" step="0.1" min="0" />
+        </label>
+        <label>Thickness (mm)
+          <input id="watchThickness" type="number" step="0.1" min="0" />
+        </label>
+        <label>Lug-to-lug (mm)
+          <input id="watchLugToLug" type="number" step="0.1" min="0" />
+        </label>
+        <label>Lug width (mm)
+          <input id="watchLugWidth" type="number" step="0.1" min="0" />
+        </label>
+      </div>
+
+      <div class="grid three">
+        <label>Water resistance (m)
+          <input id="watchWaterResistance" type="number" step="1" min="0" />
+        </label>
+        <label>Price
+          <input id="watchPrice" type="number" step="0.01" min="0" />
+        </label>
+        <label>Currency
+          <select id="watchCurrency">
+            <option>CAD</option><option>USD</option><option>EUR</option><option>GBP</option><option>CHF</option><option>JPY</option>
+          </select>
+        </label>
+      </div>
+
+      <label>Tags
+        <input id="watchTags" list="tagOptions" placeholder="Choose or type, comma separated" />
+      </label>
+      <div id="tagQuickPicker" class="choice-pills compact"></div>
+
+      <label>My take
+        <textarea id="watchNote" rows="4" placeholder="What interests you, concerns, wrist impressions, buying thoughts…"></textarea>
+      </label>
+
+      <div class="dialog-actions split-actions">
+        <button type="button" class="button danger hidden" id="deleteWatch">Delete watch</button>
+        <div class="action-group">
+          <button type="button" class="button secondary" id="cancelWatchEdit">Cancel</button>
+          <button type="submit" class="button primary">Save watch</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="ownershipDialog" class="dialog editor-dialog">
+    <form method="dialog" id="ownershipForm">
+      <input type="hidden" id="ownershipWatchId" />
+      <div class="dialog-head">
+        <div>
+          <div class="eyebrow">My collection</div>
+          <h2 id="ownershipTitle">Add to My Watches</h2>
+        </div>
+        <button value="cancel" class="icon-button" aria-label="Close">×</button>
+      </div>
+
+      <div class="grid three">
+        <label>Purchase date
+          <input id="ownershipPurchaseDate" type="date" />
+        </label>
+        <label>Purchase price
+          <input id="ownershipPurchasePrice" type="number" min="0" step="0.01" />
+        </label>
+        <label>Currency
+          <select id="ownershipCurrency"><option>CAD</option><option>USD</option><option>EUR</option><option>GBP</option><option>CHF</option></select>
+        </label>
+      </div>
+
+      <div class="grid two">
+        <label>Seller / source
+          <input id="ownershipSeller" type="text" />
+        </label>
+        <label>Current strap / bracelet
+          <input id="ownershipStrap" list="strapOptions" placeholder="Bracelet, leather, NATO…" />
+        </label>
+      </div>
+
+      <div class="grid two">
+        <label class="check-line"><input id="ownershipBox" type="checkbox" /> <span>Box</span></label>
+        <label class="check-line"><input id="ownershipPapers" type="checkbox" /> <span>Papers</span></label>
+      </div>
+
+      <label>Ownership notes
+        <textarea id="ownershipNotes" rows="4"></textarea>
+      </label>
+
+      <div class="dialog-actions split-actions">
+        <button type="button" class="button danger hidden" id="removeOwnership">Move out of My Watches</button>
+        <div class="action-group">
+          <button type="button" class="button secondary" id="cancelOwnership">Cancel</button>
+          <button type="submit" class="button primary">Save</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+
+  <dialog id="cloudDialog" class="dialog cloud-dialog">
+    <form method="dialog" id="cloudForm">
+      <div class="dialog-head">
+        <div>
+          <div class="eyebrow">Supabase</div>
+          <h2>Ticking Cloud</h2>
+        </div>
+        <button value="cancel" class="icon-button" aria-label="Close">×</button>
+      </div>
+
+      <div id="cloudMessage" class="notice">Ticking is currently using local browser storage.</div>
+
+      <label>Project URL
+        <input id="cloudUrl" type="url" placeholder="https://your-project.supabase.co" />
+      </label>
+      <label>Publishable key
+        <input id="cloudKey" type="password" autocomplete="off" placeholder="sb_publishable_…" />
+        <span class="field-help">Use the publishable key from the Supabase Connect dialog, never a secret/service-role key.</span>
+      </label>
+      <div class="dialog-actions">
+        <button type="button" class="button secondary" id="saveCloudConfig">Save connection</button>
+      </div>
+
+      <hr class="dialog-rule" />
+
+      <div id="cloudAuthLoggedOut">
+        <div class="grid two">
+          <label>Email
+            <input id="cloudEmail" type="email" autocomplete="email" placeholder="you@example.com" />
+          </label>
+          <label>Password
+            <input id="cloudPassword" type="password" autocomplete="current-password" placeholder="Password" />
+          </label>
+        </div>
+        <div class="dialog-actions">
+          <button type="button" class="button secondary" id="cloudSignUp">Create account</button>
+          <button type="button" class="button primary" id="cloudSignIn">Sign in</button>
+        </div>
+      </div>
+
+      <div id="cloudAuthLoggedIn" class="hidden">
+        <div class="card cloud-account">
+          <div class="kicker">Signed in</div>
+          <div id="cloudAccountEmail" class="title"></div>
+          <div id="cloudLastSync" class="meta"></div>
+        </div>
+        <div class="dialog-actions split-actions">
+          <button type="button" class="button ghost" id="cloudSignOut">Sign out</button>
+          <div class="action-group">
+            <button type="button" class="button secondary" id="cloudLoad">Load cloud copy</button>
+            <button type="button" class="button primary" id="cloudSync">Sync now</button>
+          </div>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="detailDialog" class="dialog detail-dialog"></dialog>
+  <dialog id="bookmarkletDialog" class="dialog bookmarklet-dialog"></dialog>
+
+  <datalist id="brandOptions"></datalist>
+  <datalist id="watchOptions"></datalist>
+  <datalist id="tagOptions"></datalist>
+  <datalist id="movementOptions"></datalist>
+  <datalist id="strapOptions">
+    <option value="Bracelet"></option><option value="Leather"></option><option value="Rubber"></option><option value="NATO"></option><option value="Canvas"></option><option value="Sailcloth"></option>
+  </datalist>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+</body>
+</html>
