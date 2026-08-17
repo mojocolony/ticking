@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'ticking.prototype.v1';
-const CURRENT_VERSION = '0.3.14';
+const CURRENT_VERSION = '0.3.15';
 
 const seed = {
   settings: { version: CURRENT_VERSION, readerFont: 'Lora', readerCustomFont: '', readerSize: 18, readerBackground: 'paper', readerWidth: 720, readerMargin: 24, readerLineHeight: 1.7 },
@@ -387,15 +387,123 @@ async function compressImageFile(file, { maxWidth=2200, quality=.84 }={}) {
     return blob || file;
   } catch { return file; }
 }
+function detectForegroundBounds(ctx, width, height) {
+  const { data } = ctx.getImageData(0, 0, width, height);
+  const samplePoints = [
+    [0,0],[width-1,0],[0,height-1],[width-1,height-1],
+    [Math.floor(width/2),0],[Math.floor(width/2),height-1],[0,Math.floor(height/2)],[width-1,Math.floor(height/2)]
+  ];
+  let bgR = 0, bgG = 0, bgB = 0, bgA = 0;
+  for (const [sx, sy] of samplePoints) {
+    const i = (sy * width + sx) * 4;
+    bgR += data[i]; bgG += data[i+1]; bgB += data[i+2]; bgA += data[i+3];
+  }
+  const count = samplePoints.length;
+  bgR /= count; bgG /= count; bgB /= count; bgA /= count;
+  let minX = width, minY = height, maxX = -1, maxY = -1, hits = 0;
+  for (let y=0; y<height; y++) {
+    for (let x=0; x<width; x++) {
+      const i = (y * width + x) * 4;
+      const a = data[i+3];
+      const diff = Math.max(Math.abs(data[i] - bgR), Math.abs(data[i+1] - bgG), Math.abs(data[i+2] - bgB));
+      const isForeground = (a > 24 && diff > 18) || (a > 24 && a < bgA - 8);
+      if (!isForeground) continue;
+      hits++;
+      if (x < minX) minX = x;
+      if (y < minY) minY = y;
+      if (x > maxX) maxX = x;
+      if (y > maxY) maxY = y;
+    }
+  }
+  if (!hits || maxX < minX || maxY < minY) return null;
+  const boxArea = (maxX - minX + 1) * (maxY - minY + 1);
+  if (boxArea < width * height * 0.015) return null;
+  return { minX, minY, maxX, maxY };
+}
+async function normalizeWatchImageFile(file, { size=1400, subjectTarget=.78, quality=.88 }={}) {
+  if (!file?.type?.startsWith('image/')) return compressImageFile(file);
+  if (file.type === 'image/gif' || file.type === 'image/svg+xml') return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, 260 / Math.max(bitmap.width, bitmap.height));
+    const probeW = Math.max(1, Math.round(bitmap.width * scale));
+    const probeH = Math.max(1, Math.round(bitmap.height * scale));
+    const probe = document.createElement('canvas'); probe.width = probeW; probe.height = probeH;
+    const pctx = probe.getContext('2d', { willReadFrequently: true });
+    pctx.drawImage(bitmap, 0, 0, probeW, probeH);
+    const bounds = detectForegroundBounds(pctx, probeW, probeH);
+    const out = document.createElement('canvas'); out.width = size; out.height = size;
+    const octx = out.getContext('2d');
+    octx.clearRect(0, 0, size, size);
+    if (!bounds) {
+      const fit = Math.min(size / bitmap.width, size / bitmap.height) * subjectTarget;
+      const drawW = bitmap.width * fit;
+      const drawH = bitmap.height * fit;
+      octx.drawImage(bitmap, (size - drawW) / 2, (size - drawH) / 2, drawW, drawH);
+      bitmap.close?.();
+      const blob = await new Promise(resolve => out.toBlob(resolve, 'image/webp', quality));
+      return blob || file;
+    }
+    const inv = 1 / scale;
+    let sx = bounds.minX * inv;
+    let sy = bounds.minY * inv;
+    let sw = (bounds.maxX - bounds.minX + 1) * inv;
+    let sh = (bounds.maxY - bounds.minY + 1) * inv;
+    const pad = Math.max(sw, sh) * 0.08;
+    sx = Math.max(0, sx - pad); sy = Math.max(0, sy - pad);
+    sw = Math.min(bitmap.width - sx, sw + pad * 2); sh = Math.min(bitmap.height - sy, sh + pad * 2);
+    const fit = Math.min((size * subjectTarget) / sw, (size * subjectTarget) / sh);
+    const drawW = sw * fit;
+    const drawH = sh * fit;
+    octx.drawImage(bitmap, sx, sy, sw, sh, (size - drawW) / 2, (size - drawH) / 2, drawW, drawH);
+    bitmap.close?.();
+    const blob = await new Promise(resolve => out.toBlob(resolve, 'image/webp', quality));
+    return blob || file;
+  } catch {
+    return compressImageFile(file);
+  }
+}
 async function uploadMedia(file, folder='watch-images') {
   if (!cloudReady()) throw new Error('Ticking Cloud must be connected and signed in before uploading images.');
-  const compact = await compressImageFile(file);
+  const compact = folder === 'watch-images' ? await normalizeWatchImageFile(file) : await compressImageFile(file);
   const ext = compact.type === 'image/webp' ? 'webp' : (file.name.split('.').pop() || 'bin').toLowerCase();
   const safeBase = (file.name.replace(/\.[^.]+$/,'') || 'image').replace(/[^a-z0-9_-]+/gi,'-').slice(0,80);
   const path = `${cloud.user.id}/${folder}/${Date.now()}-${safeBase}.${ext}`;
   const { error } = await cloud.client.storage.from(MEDIA_BUCKET).upload(path, compact, { contentType: compact.type || file.type, upsert:false, cacheControl:'3600' });
   if (error) throw error;
   return path;
+}
+async function normalizeWatchImageElement(img) {
+  if (!img || img.dataset.watchNormalized) return;
+  img.dataset.watchNormalized = '1';
+  try {
+    if (!img.complete) await new Promise(resolve => img.addEventListener('load', resolve, { once:true }));
+    const naturalW = img.naturalWidth || 0, naturalH = img.naturalHeight || 0;
+    if (!naturalW || !naturalH || !img.clientWidth || !img.clientHeight) return;
+    const scaleProbe = Math.min(1, 260 / Math.max(naturalW, naturalH));
+    const probeW = Math.max(1, Math.round(naturalW * scaleProbe));
+    const probeH = Math.max(1, Math.round(naturalH * scaleProbe));
+    const probe = document.createElement('canvas'); probe.width = probeW; probe.height = probeH;
+    const pctx = probe.getContext('2d', { willReadFrequently:true });
+    pctx.drawImage(img, 0, 0, probeW, probeH);
+    const bounds = detectForegroundBounds(pctx, probeW, probeH);
+    if (!bounds) return;
+    const inv = 1 / scaleProbe;
+    const minX = bounds.minX * inv, minY = bounds.minY * inv, maxX = (bounds.maxX + 1) * inv, maxY = (bounds.maxY + 1) * inv;
+    const subjectW = Math.max(1, maxX - minX), subjectH = Math.max(1, maxY - minY);
+    const container = img.parentElement;
+    const targetRatio = img.classList.contains('detail-media') ? 0.8 : 0.76;
+    const targetPx = Math.min(container?.clientWidth || img.clientWidth, container?.clientHeight || img.clientHeight) * targetRatio;
+    const currentSubjectW = img.clientWidth * (subjectW / naturalW);
+    const currentSubjectH = img.clientHeight * (subjectH / naturalH);
+    const scale = Math.max(1, Math.min(1.8, targetPx / Math.max(currentSubjectW, currentSubjectH)));
+    const centerX = minX + subjectW / 2;
+    const centerY = minY + subjectH / 2;
+    const tx = (0.5 - centerX / naturalW) * img.clientWidth * scale;
+    const ty = (0.5 - centerY / naturalH) * img.clientHeight * scale;
+    img.style.transformOrigin = 'center center';
+    img.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scale(${scale.toFixed(3)})`;
+  } catch {}
 }
 async function hydrateMediaImages(root=document) {
   if (!cloudReady()) return;
@@ -405,6 +513,10 @@ async function hydrateMediaImages(root=document) {
     const { data, error } = await cloud.client.storage.from(MEDIA_BUCKET).download(img.dataset.mediaPath);
     if (error || !data) { img.classList.add('media-error'); return; }
     img.src = URL.createObjectURL(data);
+    if (img.dataset.normalizeWatch === '1') {
+      if (img.complete) normalizeWatchImageElement(img);
+      else img.addEventListener('load', ()=>normalizeWatchImageElement(img), { once:true });
+    }
   }));
 }
 function formatBytes(bytes) {
@@ -570,7 +682,7 @@ function header(title, eyebrow='Ticking', action='') {
 function watchCard(w) {
   if (!w) return '';
   return `<div class="card watch-card clickable" data-watch="${w.id}">
-    <div class="watch-image">${w.heroImagePath ? `<img class="media-image" data-media-path="${escapeHtml(w.heroImagePath)}" alt="${escapeHtml(watchLabel(w))}" />` : watchGlyph('watch-glyph large')}</div>
+    <div class="watch-image">${w.heroImagePath ? `<img class="media-image" data-normalize-watch="1" data-media-path="${escapeHtml(w.heroImagePath)}" alt="${escapeHtml(watchLabel(w))}" />` : watchGlyph('watch-glyph large')}</div>
     <div class="watch-body">
       <div class="kicker">${escapeHtml(brandName(w.brandId))}</div>
       <h3>${escapeHtml(w.model)}${w.variant ? ` · ${escapeHtml(w.variant)}` : ''}</h3>
@@ -969,7 +1081,7 @@ function openWatch(id) {
     : '';
   d.innerHTML = `<div class="dialog-inner"><div class="dialog-head"><div><div class="eyebrow">${escapeHtml(brandName(w.brandId))}</div><h2>${escapeHtml(w.model)}${w.variant?` · ${escapeHtml(w.variant)}`:''}</h2>${refLabel?`<div class="meta">${escapeHtml(refLabel)}</div>`:''}</div><button class="icon-button" data-close>×</button></div>
     <div class="detail-toolbar"><button class="button secondary" data-edit-watch>Edit</button><button class="button secondary" data-own-watch>${own?'Edit My Watch':'Add to My Watches'}</button><button class="button secondary" data-share-watch>Share</button></div>
-    <div class="detail-hero"><div class="detail-image">${w.heroImagePath ? `<img class="media-image detail-media" data-media-path="${escapeHtml(w.heroImagePath)}" alt="${escapeHtml(watchLabel(w))}" />` : watchGlyph('watch-glyph hero')}</div><div class="detail-copy"><div class="pills">${(w.statuses||[]).map(s=>`<span class="pill strong">${escapeHtml(s)}</span>`).join('')}${(w.tags||[]).map(t=>`<span class="pill">${escapeHtml(t)}</span>`).join('')}</div><p>${escapeHtml(w.note || 'No personal note yet.')}</p>${w.officialUrl?`<p><a href="${escapeHtml(w.officialUrl)}" target="_blank" rel="noreferrer">Open official page ↗</a></p>`:''}</div></div>
+    <div class="detail-hero"><div class="detail-image">${w.heroImagePath ? `<img class="media-image detail-media" data-normalize-watch="1" data-media-path="${escapeHtml(w.heroImagePath)}" alt="${escapeHtml(watchLabel(w))}" />` : watchGlyph('watch-glyph hero')}</div><div class="detail-copy"><div class="pills">${(w.statuses||[]).map(s=>`<span class="pill strong">${escapeHtml(s)}</span>`).join('')}${(w.tags||[]).map(t=>`<span class="pill">${escapeHtml(t)}</span>`).join('')}</div><p>${escapeHtml(w.note || 'No personal note yet.')}</p>${w.officialUrl?`<p><a href="${escapeHtml(w.officialUrl)}" target="_blank" rel="noreferrer">Open official page ↗</a></p>`:''}</div></div>
     <div class="specs">
       ${[
         ['Diameter',w.diameter?`${w.diameter} mm`:'—'],
@@ -1096,7 +1208,7 @@ function openWatchEditor(id=null) {
   document.getElementById('watchTags').value = (w?.tags || []).join(', ');
   document.getElementById('watchNote').value = w?.note || '';
   document.getElementById('watchHeroImage').value = '';
-  document.getElementById('watchHeroImageState').textContent = w?.heroImagePath ? 'A private hero image is stored for this watch. Choose a new file to replace it.' : (cloudReady() ? 'Optional. Images are compressed to WebP before upload.' : 'Connect Ticking Cloud to upload images.');
+  document.getElementById('watchHeroImageState').textContent = w?.heroImagePath ? 'A private hero image is stored for this watch. Choose a new file to replace it.' : (cloudReady() ? 'Optional. New hero images are normalized to a consistent square presentation and uploaded as WebP.' : 'Connect Ticking Cloud to upload images.');
   populateSelect('watchMaterial', state.lookup.materials, w?.material || '');
   populateSelect('watchCrystal', state.lookup.crystals, w?.crystal || '');
   editorSelections = { types:new Set(w?.type||[]), complications:new Set(w?.complications||[]), statuses:new Set(w?.statuses||[]) };
@@ -1124,7 +1236,7 @@ watchEditorForm.addEventListener('submit',async e=>{
   let heroImagePath = existing?.heroImagePath || '';
   if (heroFile) {
     if (!cloudReady()) { alert('Connect and sign in to Ticking Cloud before uploading a watch image.'); return; }
-    const imageState = document.getElementById('watchHeroImageState'); imageState.textContent = 'Compressing and uploading…';
+    const imageState = document.getElementById('watchHeroImageState'); imageState.textContent = 'Normalizing, compressing, and uploading…';
     try { heroImagePath = await uploadMedia(heroFile, 'watch-images'); }
     catch (error) { imageState.textContent = `Upload failed: ${error.message || error}`; return; }
   }
