@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'ticking.prototype.v1';
-const CURRENT_VERSION = '0.3.15';
+const CURRENT_VERSION = '0.3.16';
 
 const seed = {
   settings: { version: CURRENT_VERSION, readerFont: 'Lora', readerCustomFont: '', readerSize: 18, readerBackground: 'paper', readerWidth: 720, readerMargin: 24, readerLineHeight: 1.7 },
@@ -671,7 +671,8 @@ function renderNav() {
   nav.innerHTML = navItems.map(item => {
     const count = item === 'Inbox' ? state.inbox.length : item === 'Reminders' ? state.reminders.filter(r => !r.done).length : item === 'Trash' ? state.trash.length : '';
     const short = item === 'My Watches' ? 'Mine' : item;
-    return `<button data-view="${item}" data-short="${escapeHtml(short.slice(0,2))}" class="${currentView === item ? 'active' : ''}"><span>${item}</span><span class="count">${count}</span></button>`;
+    const mobileNames = { Home:'Home', Inbox:'Inbox', 'My Watches':'Mine', Watches:'Watches', Brands:'Brands', Releases:'Releases', Library:'Library', Collections:'Lists', Reminders:'Remind', Trash:'Trash' };
+    return `<button data-view="${item}" data-short="${escapeHtml(short.slice(0,2))}" data-mobile="${escapeHtml(mobileNames[item] || item)}" class="${currentView === item ? 'active' : ''}"><span>${item}</span><span class="count">${count}</span></button>`;
   }).join('');
   nav.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => { setCurrentView(btn.dataset.view); search.value=''; render(); }));
 }

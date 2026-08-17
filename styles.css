@@ -88,14 +88,14 @@ a { color: inherit; }
 .site-tile { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; }
 .site-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
 
-.watch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.watch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 240px)); gap: 12px; justify-content: start; align-items: start; }
 .watch-card { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
 .watch-image { aspect-ratio: 1 / 1; height: auto; display: grid; place-items: center; overflow: hidden; background: linear-gradient(145deg, var(--surface-2), color-mix(in srgb, var(--surface-2) 55%, var(--bg))); color: var(--muted); border-bottom: 1px solid var(--line); }
 .watch-image .media-image { width: 100%; height: 100%; object-fit: contain; object-position: center; padding: 18px; background: transparent; transition: transform .18s ease-out; will-change: transform; }
 .watch-glyph.large { width: 58px; height: 58px; stroke-width: 1.5; }
-.watch-body { padding: 14px; position: relative; z-index: 1; background: var(--surface); }
-.watch-body h3 { line-height: 1.15; }
-.pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.watch-body { padding: 12px 13px 13px; position: relative; z-index: 1; background: var(--surface); }
+.watch-body h3 { line-height: 1.15; font-size: 15px; margin-bottom: 5px; }
+.pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
 .pill { display: inline-flex; padding: 5px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: 11px; font-weight: 650; }
 .pill.strong { background: var(--accent); color: var(--accent-text); }
 
@@ -292,3 +292,143 @@ a { color: inherit; }
 /* 0.3.14: Recoverable Trash */
 .card-actions { display:flex; justify-content:flex-end; margin-top:12px; }
 .danger-text { color:var(--danger); }
+
+
+/* 0.3.16 responsive polish */
+@media (max-width: 1180px) and (min-width: 651px) {
+  .watch-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 220px)); gap: 11px; }
+  .content { padding-left: 22px; padding-right: 22px; }
+}
+
+@media (max-width: 650px) {
+  html { -webkit-text-size-adjust: 100%; }
+  body { overflow-x: hidden; }
+  input, select, textarea { font-size: 16px; }
+
+  .sidebar {
+    height: 70px;
+    padding: 5px 6px max(5px, env(safe-area-inset-bottom));
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  .sidebar::-webkit-scrollbar { display: none; }
+  .nav {
+    display: flex;
+    width: max-content;
+    min-width: 100%;
+    gap: 4px;
+    scroll-snap-type: x proximity;
+  }
+  .nav button {
+    flex: 0 0 76px;
+    min-width: 76px;
+    min-height: 52px;
+    padding: 6px 5px;
+    justify-content: center;
+    scroll-snap-align: center;
+    font-size: 10px;
+    line-height: 1.05;
+    position: relative;
+  }
+  .nav button::before {
+    content: attr(data-mobile);
+    font-size: 10px;
+    font-weight: 700;
+    white-space: normal;
+    text-align: center;
+  }
+  .nav button .count {
+    position: absolute;
+    transform: translate(24px,-13px);
+    min-width: 16px;
+    font-size: 9px;
+    opacity: .8;
+  }
+
+  .topbar { height: 58px; padding: 0 10px; gap: 8px; }
+  .search-wrap { min-width: 0; }
+  .search-wrap input { font-size: 16px; padding-top: 9px; padding-bottom: 9px; padding-left: 32px; }
+  .search-icon { top: 6px; }
+  .topbar > .button { min-height: 42px; padding: 8px 11px; }
+
+  .content { padding: 16px 12px calc(88px + env(safe-area-inset-bottom)); }
+  .page-head { gap: 12px; margin-bottom: 20px; align-items: flex-end; }
+  .page-head h1 { font-size: 28px; }
+  .section { margin: 22px 0; }
+  .section-head { margin-bottom: 10px; }
+  .section-head h2 { font-size: 18px; }
+
+  .site-strip {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+    margin-left: -12px;
+    margin-right: -12px;
+    padding: 0 12px 4px;
+  }
+  .site-strip::-webkit-scrollbar { display: none; }
+  .site-tile { flex: 0 0 auto; min-height: 42px; padding: 8px 10px; scroll-snap-align: start; }
+
+  .watch-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; width: 100%; }
+  .watch-card { min-width: 0; border-radius: 12px; }
+  .watch-image .media-image { padding: 10px; }
+  .watch-body { padding: 10px 10px 11px; }
+  .watch-body .meta { font-size: 11px; line-height: 1.35; }
+  .watch-body h3 {
+    font-size: 14px;
+    line-height: 1.18;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .watch-body .pills { gap: 4px; margin-top: 7px; }
+  .watch-body .pill { font-size: 9px; padding: 4px 6px; }
+
+  .dialog,
+  .dialog.editor-dialog,
+  .detail-dialog,
+  .detail-dialog:has(.reader-shell) {
+    width: calc(100vw - 12px);
+    max-width: none;
+    max-height: calc(100dvh - 12px);
+    border-radius: 14px;
+  }
+  .dialog form, .dialog-inner { padding: 16px 14px; }
+  .dialog-head { gap: 10px; margin-bottom: 14px; }
+  .dialog-head h2 { font-size: 22px; line-height: 1.1; }
+  .icon-button { min-width: 44px; min-height: 44px; }
+  .reader-aa-button { min-width: 44px; min-height: 44px; }
+
+  .detail-hero { gap: 14px; }
+  .detail-image { max-width: 300px; min-height: 0; margin: 0 auto; }
+  .detail-image .media-image { padding: 10px; }
+  .specs { gap: 7px; }
+  .spec { padding: 9px 10px; }
+  .detail-toolbar .button { min-height: 42px; }
+
+  .list-row { padding: 12px; gap: 9px; }
+  .list-actions button { min-height: 40px; padding: 8px 10px; }
+  .button { min-height: 42px; }
+
+  .daily-sites-list { gap: 8px; }
+  .daily-site-row { padding: 9px; gap: 8px; }
+  .daily-site-row-actions button { min-width: 40px; min-height: 40px; }
+
+  .reader-shell { margin: -2px -2px 0; padding: 12px 8px 20px; }
+  .reader-settings-popover { position: fixed; top: 68px; left: 8px; right: 8px; width: auto; max-height: calc(100dvh - 84px); overflow: auto; }
+  .reader-deck, .reader-meta, .reader-article {
+    width: min(100%, var(--reader-column-width));
+    padding-left: min(var(--reader-side-margin), 7vw);
+    padding-right: min(var(--reader-side-margin), 7vw);
+  }
+  .reader-article { margin-top: 18px; }
+}
+
+@media (max-width: 360px) {
+  .watch-grid { grid-template-columns: 1fr; }
+  .watch-card { max-width: 270px; }
+  .nav button { flex-basis: 72px; min-width: 72px; }
+  .topbar > .button { padding-left: 9px; padding-right: 9px; }
+}
