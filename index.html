@@ -23,7 +23,7 @@
         </div>
         <div>
           <div class="brand-name">Ticking</div>
-          <div class="build">prototype 0.3.12</div>
+          <div class="build">prototype 0.3.13</div>
         </div>
       </div>
 
@@ -351,6 +351,25 @@
         </div>
       </div>
     </form>
+  </dialog>
+
+
+  <dialog id="dailySitesDialog" class="dialog editor-dialog daily-sites-dialog">
+    <div class="dialog-inner">
+      <div class="dialog-head">
+        <div>
+          <div class="eyebrow">Home</div>
+          <h2>Manage Daily Sites</h2>
+          <p class="meta dialog-subtitle">Add your regular watch sites and put them in the order you want. Drag rows to reorder, or use the arrow buttons.</p>
+        </div>
+        <button type="button" class="icon-button" id="cancelDailySites" aria-label="Close">×</button>
+      </div>
+      <div class="daily-sites-list" data-daily-sites-list></div>
+      <button type="button" class="button secondary daily-site-add" id="addDailySite">+ Add site</button>
+      <div class="dialog-actions">
+        <button type="button" class="button primary" id="saveDailySites">Save Daily Sites</button>
+      </div>
+    </div>
   </dialog>
 
   <dialog id="detailDialog" class="dialog detail-dialog"></dialog>

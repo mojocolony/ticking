@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'ticking.prototype.v1';
-const CURRENT_VERSION = '0.3.12';
+const CURRENT_VERSION = '0.3.13';
 
 const seed = {
   settings: { version: CURRENT_VERSION, readerFont: 'Lora', readerCustomFont: '', readerSize: 18, readerBackground: 'paper', readerWidth: 720, readerMargin: 24, readerLineHeight: 1.7 },
@@ -587,8 +587,8 @@ function renderHome() {
   const upcoming = state.releases.slice().sort((a,b)=>(a.saleDate||'9999').localeCompare(b.saleDate||'9999')).slice(0,5);
   return `${header('Home','Your watch desk')}
     <section class="section">
-      <div class="section-head"><h2>Daily sites</h2><span class="meta">Launch directly</span></div>
-      <div class="site-strip">${state.dailySites.map(s=>`<a class="site-tile" href="${escapeHtml(s.url)}" target="_blank" rel="noreferrer"><span class="site-dot"></span>${escapeHtml(s.name)} ↗</a>`).join('')}</div>
+      <div class="section-head"><h2>Daily sites</h2><div class="section-head-actions"><span class="meta">Launch directly</span><button class="button ghost compact-button" data-manage-daily-sites>Manage</button></div></div>
+      <div class="site-strip">${state.dailySites.length ? state.dailySites.map(s=>`<a class="site-tile" href="${escapeHtml(s.url)}" target="_blank" rel="noreferrer"><span class="site-dot"></span>${escapeHtml(s.name)} ↗</a>`).join('') : '<div class="empty inline-empty">No daily sites yet.</div>'}</div>
     </section>
 
     <section class="section">
@@ -675,6 +675,7 @@ function wireContent() {
   content.querySelectorAll('[data-go]').forEach(x=>x.addEventListener('click',()=>{setCurrentView(x.dataset.go);search.value='';render();}));
   content.querySelectorAll('[data-watch]').forEach(x=>x.addEventListener('click',()=>openWatch(x.dataset.watch)));
   content.querySelectorAll('[data-new-watch]').forEach(x=>x.addEventListener('click',()=>openWatchEditor()));
+  content.querySelectorAll('[data-manage-daily-sites]').forEach(x=>x.addEventListener('click',openDailySitesManager));
   content.querySelectorAll('[data-inbox-action]').forEach(btn=>btn.addEventListener('click',(e)=>{e.stopPropagation();handleInbox(btn.dataset.inboxAction,btn.dataset.id);}));
   content.querySelectorAll('[data-library-open]').forEach(btn=>btn.addEventListener('click',(e)=>{e.stopPropagation();openSaved(state.library.find(x=>x.id===btn.dataset.libraryOpen));}));
   content.querySelectorAll('[data-saved-row]').forEach(row=>row.addEventListener('click',(e)=>{
@@ -684,6 +685,119 @@ function wireContent() {
   }));
   content.querySelectorAll('[data-reminder]').forEach(btn=>btn.addEventListener('click',()=>{ const r=state.reminders.find(x=>x.id===btn.dataset.reminder); r.done=!r.done; saveState(); render(); }));
   content.querySelectorAll('[data-saved-id]').forEach(btn=>btn.addEventListener('click',()=>{const pool=btn.dataset.savedBucket==='Inbox'?state.inbox:state.library; openSaved(pool.find(x=>x.id===btn.dataset.savedId));}));
+}
+
+let dailySitesDraft = [];
+let dailySiteDragIndex = null;
+
+function cleanDailySiteUrl(value='') {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const candidate = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  try {
+    const u = new URL(candidate);
+    return (u.protocol === 'http:' || u.protocol === 'https:') ? u.href : '';
+  } catch { return ''; }
+}
+
+function openDailySitesManager() {
+  dailySitesDraft = clone(state.dailySites || []);
+  dailySiteDragIndex = null;
+  renderDailySitesManager();
+  const d = document.getElementById('dailySitesDialog');
+  if (!d.open) d.showModal();
+}
+
+function renderDailySitesManager() {
+  const d = document.getElementById('dailySitesDialog');
+  const list = d.querySelector('[data-daily-sites-list]');
+  if (!list) return;
+  list.innerHTML = dailySitesDraft.length ? dailySitesDraft.map((site,index)=>`
+    <div class="daily-site-row" draggable="true" data-daily-site-index="${index}">
+      <button type="button" class="drag-handle" aria-label="Drag ${escapeHtml(site.name || 'site')} to reorder" title="Drag to reorder">⋮⋮</button>
+      <div class="daily-site-fields">
+        <label>Name<input type="text" value="${escapeHtml(site.name || '')}" data-daily-site-name="${index}" placeholder="Fratello" /></label>
+        <label>Website<input type="text" inputmode="url" value="${escapeHtml(site.url || '')}" data-daily-site-url="${index}" placeholder="https://…" /></label>
+      </div>
+      <div class="daily-site-row-actions">
+        <button type="button" class="icon-button small" data-daily-site-up="${index}" aria-label="Move up" title="Move up" ${index===0?'disabled':''}>↑</button>
+        <button type="button" class="icon-button small" data-daily-site-down="${index}" aria-label="Move down" title="Move down" ${index===dailySitesDraft.length-1?'disabled':''}>↓</button>
+        <button type="button" class="icon-button small danger-icon" data-daily-site-remove="${index}" aria-label="Remove site" title="Remove site">×</button>
+      </div>
+    </div>`).join('') : '<div class="empty">No daily sites yet. Add one below.</div>';
+
+  list.querySelectorAll('[data-daily-site-name]').forEach(input=>input.addEventListener('input',()=>{
+    dailySitesDraft[Number(input.dataset.dailySiteName)].name = input.value;
+  }));
+  list.querySelectorAll('[data-daily-site-url]').forEach(input=>input.addEventListener('input',()=>{
+    dailySitesDraft[Number(input.dataset.dailySiteUrl)].url = input.value;
+  }));
+  list.querySelectorAll('[data-daily-site-remove]').forEach(btn=>btn.addEventListener('click',()=>{
+    dailySitesDraft.splice(Number(btn.dataset.dailySiteRemove),1);
+    renderDailySitesManager();
+  }));
+  list.querySelectorAll('[data-daily-site-up]').forEach(btn=>btn.addEventListener('click',()=>moveDailySite(Number(btn.dataset.dailySiteUp),-1)));
+  list.querySelectorAll('[data-daily-site-down]').forEach(btn=>btn.addEventListener('click',()=>moveDailySite(Number(btn.dataset.dailySiteDown),1)));
+
+  list.querySelectorAll('.daily-site-row').forEach(row=>{
+    row.addEventListener('dragstart',event=>{
+      dailySiteDragIndex = Number(row.dataset.dailySiteIndex);
+      row.classList.add('dragging');
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', String(dailySiteDragIndex));
+    });
+    row.addEventListener('dragend',()=>{
+      dailySiteDragIndex = null;
+      list.querySelectorAll('.daily-site-row').forEach(x=>x.classList.remove('dragging','drag-over'));
+    });
+    row.addEventListener('dragover',event=>{
+      event.preventDefault();
+      if (dailySiteDragIndex === null) return;
+      row.classList.add('drag-over');
+      event.dataTransfer.dropEffect = 'move';
+    });
+    row.addEventListener('dragleave',()=>row.classList.remove('drag-over'));
+    row.addEventListener('drop',event=>{
+      event.preventDefault();
+      row.classList.remove('drag-over');
+      const target = Number(row.dataset.dailySiteIndex);
+      if (dailySiteDragIndex === null || target === dailySiteDragIndex) return;
+      const [moved] = dailySitesDraft.splice(dailySiteDragIndex,1);
+      dailySitesDraft.splice(target,0,moved);
+      dailySiteDragIndex = null;
+      renderDailySitesManager();
+    });
+  });
+}
+
+function moveDailySite(index, delta) {
+  const target = index + delta;
+  if (target < 0 || target >= dailySitesDraft.length) return;
+  [dailySitesDraft[index], dailySitesDraft[target]] = [dailySitesDraft[target], dailySitesDraft[index]];
+  renderDailySitesManager();
+}
+
+function addDailySiteRow() {
+  dailySitesDraft.push({ name:'', url:'' });
+  renderDailySitesManager();
+  const input = document.querySelector(`[data-daily-site-name="${dailySitesDraft.length-1}"]`);
+  input?.focus();
+}
+
+function saveDailySitesManager() {
+  const cleaned = [];
+  for (const site of dailySitesDraft) {
+    const name = String(site.name || '').trim();
+    const url = cleanDailySiteUrl(site.url);
+    if (!name && !String(site.url || '').trim()) continue;
+    if (!name) { alert('Give each Daily Site a name.'); return; }
+    if (!url) { alert(`Enter a valid web address for ${name}.`); return; }
+    cleaned.push({ name, url });
+  }
+  state.dailySites = cleaned;
+  saveState();
+  document.getElementById('dailySitesDialog').close();
+  render();
 }
 
 function watchSummary(w) {
@@ -1041,6 +1155,10 @@ function refreshDatalists() {
   populateSelect('captureStatus', ['None', ...state.lookup.statuses], document.getElementById('captureStatus')?.value || '', false);
   if (document.getElementById('captureStatus').options[0]?.textContent === 'None') document.getElementById('captureStatus').options[0].value='';
 }
+
+document.getElementById('addDailySite')?.addEventListener('click',addDailySiteRow);
+document.getElementById('saveDailySites')?.addEventListener('click',saveDailySitesManager);
+document.getElementById('cancelDailySites')?.addEventListener('click',()=>document.getElementById('dailySitesDialog').close());
 
 search.addEventListener('input',render);
 

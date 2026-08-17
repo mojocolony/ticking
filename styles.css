@@ -263,3 +263,28 @@ a { color: inherit; }
 .compact-button { width: auto !important; padding: 7px 9px; min-height: 0; }
 .storage-meter { height: 7px; margin: 12px 0 8px; border-radius: 999px; overflow: hidden; background: var(--surface-2); border: 1px solid var(--line); }
 .storage-meter span { display: block; height: 100%; width: 0; min-width: 0; border-radius: inherit; background: var(--accent); transition: width .2s ease; }
+
+
+/* Daily Sites manager */
+.section-head-actions { display: flex; align-items: center; gap: 10px; }
+.inline-empty { width: 100%; }
+.dialog-subtitle { margin: 6px 0 0; max-width: 620px; }
+.daily-sites-list { display: grid; gap: 10px; margin: 4px 0 14px; }
+.daily-site-row { display: grid; grid-template-columns: 34px minmax(0,1fr) auto; gap: 10px; align-items: center; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); transition: opacity .12s ease, transform .12s ease, border-color .12s ease; }
+.daily-site-row.dragging { opacity: .5; }
+.daily-site-row.drag-over { border-color: var(--muted); transform: translateY(2px); }
+.drag-handle { border: 0; background: transparent; color: var(--muted); font-size: 21px; line-height: 1; cursor: grab; padding: 8px 4px; }
+.drag-handle:active { cursor: grabbing; }
+.daily-site-fields { display: grid; grid-template-columns: minmax(140px,.7fr) minmax(220px,1.3fr); gap: 10px; }
+.daily-site-fields label { margin: 0; }
+.daily-site-row-actions { display: flex; gap: 5px; align-items: center; }
+.icon-button.small { width: 32px; height: 32px; min-width: 32px; padding: 0; font-size: 17px; }
+.icon-button.small:disabled { opacity: .28; cursor: default; }
+.danger-icon { color: var(--danger, #9b3434); }
+.daily-site-add { margin-top: 2px; }
+@media (max-width: 700px) {
+  .section-head-actions .meta { display: none; }
+  .daily-site-row { grid-template-columns: 28px minmax(0,1fr); align-items: start; }
+  .daily-site-fields { grid-template-columns: 1fr; }
+  .daily-site-row-actions { grid-column: 2; justify-content: flex-end; }
+}
