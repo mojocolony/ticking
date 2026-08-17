@@ -197,7 +197,7 @@ a { color: inherit; }
 .media-image { width: 100%; height: 100%; object-fit: cover; display: block; }
 .media-image.media-error { display: none; }
 .detail-media { border-radius: 13px; }
-.detail-dialog:has(.reader-shell) { width: min(var(--reader-dialog-width, 870px), calc(100vw - 28px)); }
+.detail-dialog:has(.reader-shell) { width: min(1180px, calc(100vw - 28px)); }
 .reader-shell {
   --reader-font-size: 18px;
   --reader-font-family: Georgia, 'Times New Roman', serif;

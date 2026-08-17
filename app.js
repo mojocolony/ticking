@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'ticking.prototype.v1';
-const CURRENT_VERSION = '0.3.11';
+const CURRENT_VERSION = '0.3.12';
 
 const seed = {
   settings: { version: CURRENT_VERSION, readerFont: 'Lora', readerCustomFont: '', readerSize: 18, readerBackground: 'paper', readerWidth: 720, readerMargin: 24, readerLineHeight: 1.7 },
@@ -102,8 +102,6 @@ function applyReaderPrefs(root) {
   shell.style.setProperty('--reader-column-width', `${prefs.width}px`);
   shell.style.setProperty('--reader-side-margin', `${prefs.margin}px`);
   shell.style.setProperty('--reader-line-height', String(prefs.lineHeight));
-  const dialog = shell.closest('.detail-dialog');
-  if (dialog) dialog.style.setProperty('--reader-dialog-width', `${Math.min(1180, prefs.width + 150)}px`);
 
   const font = root.querySelector('[data-reader-font]');
   const size = root.querySelector('[data-reader-size]');
@@ -743,12 +741,32 @@ function openWatch(id) {
   hydrateMediaImages(d);
 }
 
+function shouldShowReaderExcerpt(item) {
+  const excerpt = String(item?.readerExcerpt || '').replace(/\s+/g, ' ').trim();
+  if (!excerpt) return false;
+  const articleText = String(item?.readerText || '').replace(/\s+/g, ' ').trim();
+  if (!articleText) return true;
+
+  const normalize = value => String(value || '')
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201c\u201d]/g, '"')
+    .replace(/\[…\]|\.\.\.$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+  const ex = normalize(excerpt);
+  const opening = normalize(articleText.slice(0, Math.max(800, excerpt.length + 200)));
+  if (!ex) return false;
+  const probe = ex.slice(0, Math.min(180, ex.length));
+  return !opening.startsWith(probe) && !opening.includes(probe);
+}
+
 function openSaved(item) {
   if (!item) return;
   const d = document.getElementById('detailDialog');
   const readerMeta = [item.readerByline, item.readerPublishedTime ? fmtDate(item.readerPublishedTime) : ''].filter(Boolean).map(escapeHtml).join(' · ');
   const reader = item.type === 'Article' && item.articleState === 'ready' && item.readerHtml
-    ? `<section class="reader-shell">${readerControls()}${item.readerExcerpt?`<p class="reader-deck">${escapeHtml(item.readerExcerpt)}</p>`:''}${readerMeta?`<p class="meta reader-meta">${readerMeta}</p>`:''}<article class="reader-article">${item.readerHtml}</article></section>`
+    ? `<section class="reader-shell">${readerControls()}${shouldShowReaderExcerpt(item)?`<p class="reader-deck">${escapeHtml(item.readerExcerpt)}</p>`:''}${readerMeta?`<p class="meta reader-meta">${readerMeta}</p>`:''}<article class="reader-article">${item.readerHtml}</article></section>`
     : '';
   const articleNotice = item.articleState === 'processing' ? '<div class="notice">Mozilla Readability is processing this article now.</div>'
     : item.articleState === 'pending' ? '<div class="notice">Reader capture is waiting for Ticking Cloud. Connect Supabase, then retry.</div>'
