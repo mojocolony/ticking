@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'ticking.prototype.v1';
-const CURRENT_VERSION = '0.3.13';
+const CURRENT_VERSION = '0.3.14';
 
 const seed = {
   settings: { version: CURRENT_VERSION, readerFont: 'Lora', readerCustomFont: '', readerSize: 18, readerBackground: 'paper', readerWidth: 720, readerMargin: 24, readerLineHeight: 1.7 },
@@ -44,6 +44,7 @@ const seed = {
     { id: 'rm1', date: '2026-08-22', text: 'Check Venturer availability and Canadian landed cost.', target: 'Traska Venturer', done: false },
     { id: 'rm2', date: '2026-10-18', text: 'Try the Serica 6190 in person.', target: 'Toronto watch show', done: false }
   ],
+  trash: [],
   lookup: {
     statuses: ['Interested', 'Researching', 'Consider Buying', 'See in Person', 'Watching', 'Owned', 'Formerly Owned', 'Not for Me'],
     watchTypes: ['Diver', 'Field', 'Pilot', 'Dress', 'GMT', 'Chronograph', 'Tool', 'Sports'],
@@ -192,7 +193,7 @@ function loadState() {
       settings: { ...(seed.settings || {}), ...(saved.settings || {}), version: CURRENT_VERSION },
       lookup: { ...clone(seed.lookup), ...(saved.lookup || {}) }
     };
-    for (const key of ['dailySites','brands','watches','myWatches','releases','inbox','library','collections','reminders']) {
+    for (const key of ['dailySites','brands','watches','myWatches','releases','inbox','library','collections','reminders','trash']) {
       if (!Array.isArray(merged[key])) merged[key] = clone(seed[key]);
     }
     return merged;
@@ -212,7 +213,7 @@ function mergeIncomingState(saved) {
     settings: { ...(seed.settings || {}), ...((saved || {}).settings || {}), version: CURRENT_VERSION },
     lookup: { ...clone(seed.lookup), ...((saved || {}).lookup || {}) }
   };
-  for (const key of ['dailySites','brands','watches','myWatches','releases','inbox','library','collections','reminders']) {
+  for (const key of ['dailySites','brands','watches','myWatches','releases','inbox','library','collections','reminders','trash']) {
     if (!Array.isArray(merged[key])) merged[key] = clone(seed[key]);
   }
   return merged;
@@ -510,7 +511,7 @@ let currentView = localStorage.getItem(VIEW_KEY) || 'Home';
 let currentCaptureType = 'Link';
 let editorSelections = { types: new Set(), complications: new Set(), statuses: new Set() };
 
-const navItems = ['Home', 'Inbox', 'My Watches', 'Watches', 'Brands', 'Releases', 'Library', 'Collections', 'Reminders'];
+const navItems = ['Home', 'Inbox', 'My Watches', 'Watches', 'Brands', 'Releases', 'Library', 'Collections', 'Reminders', 'Trash'];
 if (!navItems.includes(currentView)) currentView = 'Home';
 function setCurrentView(view) {
   currentView = navItems.includes(view) ? view : 'Home';
@@ -556,7 +557,7 @@ function ensureBrand(name) {
 
 function renderNav() {
   nav.innerHTML = navItems.map(item => {
-    const count = item === 'Inbox' ? state.inbox.length : item === 'Reminders' ? state.reminders.filter(r => !r.done).length : '';
+    const count = item === 'Inbox' ? state.inbox.length : item === 'Reminders' ? state.reminders.filter(r => !r.done).length : item === 'Trash' ? state.trash.length : '';
     const short = item === 'My Watches' ? 'Mine' : item;
     return `<button data-view="${item}" data-short="${escapeHtml(short.slice(0,2))}" class="${currentView === item ? 'active' : ''}"><span>${item}</span><span class="count">${count}</span></button>`;
   }).join('');
@@ -637,13 +638,35 @@ function renderReleases() {
   return `${header('Releases','Timeline')}<div class="list">${state.releases.slice().sort((a,b)=>(b.announcementDate||'').localeCompare(a.announcementDate||'')).map(r=>listRow(escapeHtml(r.title), `${escapeHtml(brandName(r.brandId))} · announced ${fmtDate(r.announcementDate)} · ${escapeHtml(r.type)} · ${formatPrice(r.price,r.currency)}`, `<button>${escapeHtml(r.status)}</button>`)).join('')}</div>`;
 }
 function renderLibrary() {
-  return `${header('Library','Saved research')}<div class="list">${state.library.map(item=>listRow(escapeHtml(item.title), `${escapeHtml(item.type)} · ${escapeHtml(item.source || sourceFromUrl(item.url))}${item.readStatus ? ` · ${escapeHtml(item.readStatus)}`:''}${item.articleState==='processing'?' · Processing Reader…':''}${item.articleState==='pending'?' · Reader pending':''}${item.articleState==='error'?' · Reader error':''}${item.screenshotState==='pending'?' · Screenshot capture pending':''}`, `<button data-library-open="${item.id}">Open</button>`, `data-saved-row="library" data-saved-row-id="${item.id}"`)).join('')}</div>`;
+  return `${header('Library','Saved research')}<div class="list">${state.library.map(item=>listRow(escapeHtml(item.title), `${escapeHtml(item.type)} · ${escapeHtml(item.source || sourceFromUrl(item.url))}${item.readStatus ? ` · ${escapeHtml(item.readStatus)}`:''}${item.articleState==='processing'?' · Processing Reader…':''}${item.articleState==='pending'?' · Reader pending':''}${item.articleState==='error'?' · Reader error':''}${item.screenshotState==='pending'?' · Screenshot capture pending':''}`, `<button data-library-open="${item.id}">Open</button><button data-library-trash="${item.id}">Delete</button>`, `data-saved-row="library" data-saved-row-id="${item.id}"`)).join('')}</div>`;
 }
 function renderCollections() {
-  return `${header('Collections','Research boards')}<div class="grid three">${state.collections.map(c=>`<div class="card"><div class="kicker">${c.itemCount} items</div><h3>${escapeHtml(c.name)}</h3><p class="meta">${escapeHtml(c.description)}</p></div>`).join('')}</div>`;
+  return `${header('Collections','Research boards')}<div class="grid three">${state.collections.map(c=>`<div class="card"><div class="kicker">${c.itemCount} items</div><h3>${escapeHtml(c.name)}</h3><p class="meta">${escapeHtml(c.description)}</p><div class="card-actions"><button class="button ghost compact-button" data-collection-trash="${c.id}">Delete</button></div></div>`).join('')}</div>`;
 }
 function renderReminders() {
-  return `${header('Reminders','Watch nudges')}<div class="list">${state.reminders.map(r=>listRow(escapeHtml(r.text), `${fmtDate(r.date)} · ${escapeHtml(r.target)}`, `<button data-reminder="${r.id}">${r.done?'Reopen':'Done'}</button>`)).join('')}</div>`;
+  return `${header('Reminders','Watch nudges')}<div class="list">${state.reminders.map(r=>listRow(escapeHtml(r.text), `${fmtDate(r.date)} · ${escapeHtml(r.target)}`, `<button data-reminder="${r.id}">${r.done?'Reopen':'Done'}</button><button data-reminder-trash="${r.id}">Delete</button>`)).join('')}</div>`;
+}
+
+function trashLabel(entry) {
+  const d = entry?.data || {};
+  if (entry.kind === 'watch') return `${d.brandName || 'Watch'} ${d.model || ''}${d.variant ? ` · ${d.variant}` : ''}`.trim();
+  if (entry.kind === 'saved') return d.title || d.url || 'Saved item';
+  if (entry.kind === 'collection') return d.name || 'Collection';
+  if (entry.kind === 'reminder') return d.text || 'Reminder';
+  if (entry.kind === 'dailySite') return d.name || d.url || 'Daily Site';
+  return 'Deleted item';
+}
+function trashKindLabel(entry) {
+  if (entry.kind === 'saved') return entry.bucket === 'inbox' ? 'Inbox item' : (entry.data?.type || 'Saved item');
+  return ({watch:'Watch',collection:'Collection',reminder:'Reminder',dailySite:'Daily Site'})[entry.kind] || 'Item';
+}
+function renderTrash() {
+  const action = state.trash.length ? `<button class="button danger" data-empty-trash>Empty Trash</button>` : '';
+  if (!state.trash.length) return `${header('Trash','Recover deleted items',action)}<div class="empty">Trash is empty.</div>`;
+  const rows = state.trash.slice().sort((a,b)=>String(b.deletedAt||'').localeCompare(String(a.deletedAt||''))).map(entry=>
+    listRow(escapeHtml(trashLabel(entry)), `${escapeHtml(trashKindLabel(entry))} · deleted ${fmtDate(entry.deletedAt)}`, `<button data-trash-restore="${entry.id}">Restore</button><button class="danger-text" data-trash-delete="${entry.id}">Delete permanently</button>`)
+  ).join('');
+  return `${header('Trash','Recover deleted items',action)}<div class="notice">Deleted items stay here until you restore them or delete them permanently.</div><div class="list">${rows}</div>`;
 }
 
 function renderSearch(q) {
@@ -663,7 +686,7 @@ function render() {
   const q = search.value;
   if (q.trim()) content.innerHTML = renderSearch(q);
   else {
-    const renderers = { Home:renderHome, Inbox:renderInbox, 'My Watches':renderMyWatches, Watches:renderWatches, Brands:renderBrands, Releases:renderReleases, Library:renderLibrary, Collections:renderCollections, Reminders:renderReminders };
+    const renderers = { Home:renderHome, Inbox:renderInbox, 'My Watches':renderMyWatches, Watches:renderWatches, Brands:renderBrands, Releases:renderReleases, Library:renderLibrary, Collections:renderCollections, Reminders:renderReminders, Trash:renderTrash };
     content.innerHTML = renderers[currentView]();
   }
   wireContent();
@@ -678,6 +701,12 @@ function wireContent() {
   content.querySelectorAll('[data-manage-daily-sites]').forEach(x=>x.addEventListener('click',openDailySitesManager));
   content.querySelectorAll('[data-inbox-action]').forEach(btn=>btn.addEventListener('click',(e)=>{e.stopPropagation();handleInbox(btn.dataset.inboxAction,btn.dataset.id);}));
   content.querySelectorAll('[data-library-open]').forEach(btn=>btn.addEventListener('click',(e)=>{e.stopPropagation();openSaved(state.library.find(x=>x.id===btn.dataset.libraryOpen));}));
+  content.querySelectorAll('[data-library-trash]').forEach(btn=>btn.addEventListener('click',(e)=>{e.stopPropagation();moveSavedToTrash('library',btn.dataset.libraryTrash);}));
+  content.querySelectorAll('[data-collection-trash]').forEach(btn=>btn.addEventListener('click',()=>moveCollectionToTrash(btn.dataset.collectionTrash)));
+  content.querySelectorAll('[data-reminder-trash]').forEach(btn=>btn.addEventListener('click',()=>moveReminderToTrash(btn.dataset.reminderTrash)));
+  content.querySelectorAll('[data-trash-restore]').forEach(btn=>btn.addEventListener('click',()=>restoreTrashItem(btn.dataset.trashRestore)));
+  content.querySelectorAll('[data-trash-delete]').forEach(btn=>btn.addEventListener('click',()=>permanentlyDeleteTrashItem(btn.dataset.trashDelete)));
+  content.querySelectorAll('[data-empty-trash]').forEach(btn=>btn.addEventListener('click',emptyTrash));
   content.querySelectorAll('[data-saved-row]').forEach(row=>row.addEventListener('click',(e)=>{
     if (e.target.closest('button, a')) return;
     const pool = row.dataset.savedRow === 'inbox' ? state.inbox : state.library;
@@ -687,7 +716,112 @@ function wireContent() {
   content.querySelectorAll('[data-saved-id]').forEach(btn=>btn.addEventListener('click',()=>{const pool=btn.dataset.savedBucket==='Inbox'?state.inbox:state.library; openSaved(pool.find(x=>x.id===btn.dataset.savedId));}));
 }
 
+function pushTrash(kind, data, extra={}) {
+  state.trash.unshift({ id:uid('tr'), kind, data:clone(data), deletedAt:new Date().toISOString(), ...extra });
+}
+function moveSavedToTrash(bucket,id,{confirmFirst=true}={}) {
+  const pool = bucket === 'inbox' ? state.inbox : state.library;
+  const item = pool.find(x=>x.id===id); if (!item) return false;
+  if (confirmFirst && !confirm(`Move “${item.title || item.url || 'this item'}” to Trash?`)) return false;
+  pushTrash('saved', item, {bucket});
+  if (bucket === 'inbox') state.inbox = state.inbox.filter(x=>x.id!==id);
+  else state.library = state.library.filter(x=>x.id!==id);
+  saveState(); render(); return true;
+}
+function moveCollectionToTrash(id) {
+  const item=state.collections.find(x=>x.id===id); if(!item) return;
+  if(!confirm(`Move “${item.name}” to Trash?`)) return;
+  pushTrash('collection', item); state.collections=state.collections.filter(x=>x.id!==id); saveState(); render();
+}
+function moveReminderToTrash(id) {
+  const item=state.reminders.find(x=>x.id===id); if(!item) return;
+  if(!confirm('Move this reminder to Trash?')) return;
+  pushTrash('reminder', item); state.reminders=state.reminders.filter(x=>x.id!==id); saveState(); render();
+}
+function moveWatchToTrash(id) {
+  const w=state.watches.find(x=>x.id===id); if(!w) return false;
+  if(!confirm(`Move ${brandName(w.brandId)} ${w.model} to Trash?`)) return false;
+  const ownership = state.myWatches.find(x=>x.watchId===id) || null;
+  pushTrash('watch', {...w, brandName:brandName(w.brandId)}, {ownership:ownership?clone(ownership):null});
+  state.watches=state.watches.filter(x=>x.id!==id);
+  state.myWatches=state.myWatches.filter(x=>x.watchId!==id);
+  saveState(); return true;
+}
+function restoreTrashItem(id) {
+  const entry=state.trash.find(x=>x.id===id); if(!entry) return;
+  const d=clone(entry.data || {});
+  if(entry.kind==='saved') {
+    const pool=entry.bucket==='inbox'?state.inbox:state.library;
+    if(!pool.some(x=>x.id===d.id)) pool.unshift(d);
+  } else if(entry.kind==='watch') {
+    delete d.brandName;
+    if(!state.watches.some(x=>x.id===d.id)) state.watches.unshift(d);
+    if(entry.ownership && !state.myWatches.some(x=>x.id===entry.ownership.id)) state.myWatches.unshift(clone(entry.ownership));
+  } else if(entry.kind==='collection') {
+    if(!state.collections.some(x=>x.id===d.id)) state.collections.unshift(d);
+  } else if(entry.kind==='reminder') {
+    if(!state.reminders.some(x=>x.id===d.id)) state.reminders.unshift(d);
+  } else if(entry.kind==='dailySite') {
+    if(!state.dailySites.some(x=>normalizeUrl(x.url)===normalizeUrl(d.url) && x.name===d.name)) state.dailySites.push(d);
+  }
+  state.trash=state.trash.filter(x=>x.id!==id); saveState(); render();
+}
+function mediaPathsForTrashEntry(entry) {
+  const d=entry?.data || {};
+  const paths=[];
+  if(entry.kind==='watch' && d.heroImagePath) paths.push(d.heroImagePath);
+  if(entry.kind==='saved') {
+    if(Array.isArray(d.readerMediaPaths)) paths.push(...d.readerMediaPaths);
+    if(d.screenshotPath) paths.push(d.screenshotPath);
+    if(d.mediaPath) paths.push(d.mediaPath);
+  }
+  return [...new Set(paths.filter(Boolean))];
+}
+async function removeTrashMedia(entry) {
+  const paths=mediaPathsForTrashEntry(entry);
+  if(!paths.length) return true;
+  if(!cloudReady()) { alert('Connect to Ticking Cloud before permanently deleting an item that has stored images. This ensures the private Storage files are removed too.'); return false; }
+  try {
+    const {error}=await cloud.client.storage.from(MEDIA_BUCKET).remove(paths);
+    if(error) throw error;
+    return true;
+  } catch(error) {
+    console.warn('Could not remove trashed media', error);
+    alert(`Could not remove the stored media, so the item was left in Trash. ${error?.message || error || ''}`.trim());
+    return false;
+  }
+}
+async function permanentlyDeleteTrashItem(id) {
+  const entry=state.trash.find(x=>x.id===id); if(!entry) return;
+  if(!confirm(`Permanently delete “${trashLabel(entry)}”? This cannot be undone.`)) return;
+  if(!(await removeTrashMedia(entry))) return;
+  state.trash=state.trash.filter(x=>x.id!==id); saveState(); render();
+}
+async function emptyTrash() {
+  if(!state.trash.length) return;
+  if(!confirm(`Permanently delete all ${state.trash.length} item${state.trash.length===1?'':'s'} in Trash? This cannot be undone.`)) return;
+  const items=[...state.trash];
+  for(const entry of items) if(!(await removeTrashMedia(entry))) return;
+  state.trash=[]; saveState(); render();
+}
+function unbindDialogBackdropClose(dialog) {
+  if(dialog?._tickingBackdropHandler) dialog.removeEventListener('click', dialog._tickingBackdropHandler);
+  if(dialog) dialog._tickingBackdropHandler=null;
+}
+function bindDialogBackdropClose(dialog) {
+  unbindDialogBackdropClose(dialog);
+  const handler=(event)=>{
+    if(event.target !== dialog) return;
+    const r=dialog.getBoundingClientRect();
+    const outside=event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom;
+    if(outside) dialog.close();
+  };
+  dialog._tickingBackdropHandler=handler;
+  dialog.addEventListener('click',handler);
+}
+
 let dailySitesDraft = [];
+let dailySitesRemovedDraft = [];
 let dailySiteDragIndex = null;
 
 function cleanDailySiteUrl(value='') {
@@ -701,7 +835,8 @@ function cleanDailySiteUrl(value='') {
 }
 
 function openDailySitesManager() {
-  dailySitesDraft = clone(state.dailySites || []);
+  dailySitesDraft = clone(state.dailySites || []).map(site=>({...site,__existing:true}));
+  dailySitesRemovedDraft = [];
   dailySiteDragIndex = null;
   renderDailySitesManager();
   const d = document.getElementById('dailySitesDialog');
@@ -733,7 +868,9 @@ function renderDailySitesManager() {
     dailySitesDraft[Number(input.dataset.dailySiteUrl)].url = input.value;
   }));
   list.querySelectorAll('[data-daily-site-remove]').forEach(btn=>btn.addEventListener('click',()=>{
-    dailySitesDraft.splice(Number(btn.dataset.dailySiteRemove),1);
+    const index = Number(btn.dataset.dailySiteRemove);
+    const [removed] = dailySitesDraft.splice(index,1);
+    if (removed?.__existing) dailySitesRemovedDraft.push(removed);
     renderDailySitesManager();
   }));
   list.querySelectorAll('[data-daily-site-up]').forEach(btn=>btn.addEventListener('click',()=>moveDailySite(Number(btn.dataset.dailySiteUp),-1)));
@@ -778,7 +915,7 @@ function moveDailySite(index, delta) {
 }
 
 function addDailySiteRow() {
-  dailySitesDraft.push({ name:'', url:'' });
+  dailySitesDraft.push({ name:'', url:'', __existing:false });
   renderDailySitesManager();
   const input = document.querySelector(`[data-daily-site-name="${dailySitesDraft.length-1}"]`);
   input?.focus();
@@ -794,6 +931,7 @@ function saveDailySitesManager() {
     if (!url) { alert(`Enter a valid web address for ${name}.`); return; }
     cleaned.push({ name, url });
   }
+  dailySitesRemovedDraft.forEach(site=>pushTrash('dailySite', {name:site.name || '', url:site.url || ''}));
   state.dailySites = cleaned;
   saveState();
   document.getElementById('dailySitesDialog').close();
@@ -823,6 +961,7 @@ function openWatch(id) {
   const w = state.watches.find(x=>x.id===id); if (!w) return;
   const own = state.myWatches.find(x=>x.watchId===id);
   const d = document.getElementById('detailDialog');
+  unbindDialogBackdropClose(d);
   const normalizedModel = String(w.model || '').replace(/^ref\.?\s*/i,'').trim().toLowerCase();
   const normalizedRef = String(w.referenceNumber || '').replace(/^ref\.?\s*/i,'').trim().toLowerCase();
   const refLabel = w.referenceNumber && normalizedRef !== normalizedModel
@@ -878,6 +1017,7 @@ function shouldShowReaderExcerpt(item) {
 function openSaved(item) {
   if (!item) return;
   const d = document.getElementById('detailDialog');
+  const bucket = state.inbox.some(x=>x.id===item.id) ? 'inbox' : state.library.some(x=>x.id===item.id) ? 'library' : '';
   const readerMeta = [item.readerByline, item.readerPublishedTime ? fmtDate(item.readerPublishedTime) : ''].filter(Boolean).map(escapeHtml).join(' · ');
   const reader = item.type === 'Article' && item.articleState === 'ready' && item.readerHtml
     ? `<section class="reader-shell">${readerControls()}${shouldShowReaderExcerpt(item)?`<p class="reader-deck">${escapeHtml(item.readerExcerpt)}</p>`:''}${readerMeta?`<p class="meta reader-meta">${readerMeta}</p>`:''}<article class="reader-article">${item.readerHtml}</article></section>`
@@ -885,11 +1025,13 @@ function openSaved(item) {
   const articleNotice = item.articleState === 'processing' ? '<div class="notice">Mozilla Readability is processing this article now.</div>'
     : item.articleState === 'pending' ? '<div class="notice">Reader capture is waiting for Ticking Cloud. Connect Supabase, then retry.</div>'
     : item.articleState === 'error' ? `<div class="notice warning">Reader capture failed: ${escapeHtml(item.articleError || 'Unknown error')}</div>` : '';
-  d.innerHTML = `<div class="dialog-inner"><div class="dialog-head"><div><div class="eyebrow">${escapeHtml(item.type)}</div><h2>${escapeHtml(item.title)}</h2></div><div class="reader-head-actions">${reader?`<button class="reader-aa-button" type="button" data-reader-settings-toggle aria-label="Reader appearance" aria-expanded="false">Aa</button>`:''}<button class="icon-button" data-close aria-label="Close">×</button></div></div><p class="meta">${escapeHtml(item.source || sourceFromUrl(item.url))} · ${fmtDate(item.savedAt)}</p>${item.status?`<div class="pills"><span class="pill strong">${escapeHtml(item.status)}</span>${(item.tags||[]).map(t=>`<span class="pill">${escapeHtml(t)}</span>`).join('')}</div>`:''}${item.selectedText?`<div class="card quote-card"><p>${escapeHtml(item.selectedText)}</p></div>`:''}${item.note?`<div class="card"><div class="kicker">Note</div>${escapeHtml(item.note)}</div>`:''}${articleNotice}${reader}${item.screenshotState==='pending'?`<div class="notice">Full-page screenshot capture is queued for the hosted capture service, where it will be compressed before upload.</div>`:''}<div class="dialog-actions">${item.readStatus?`<button class="button secondary" data-toggle-read>${item.readStatus==='Read'?'Mark unread':'Mark read'}</button>`:''}${item.type==='Article'?`<button class="button secondary" data-retry-reader>${item.articleState==='ready'?'Refresh Reader':'Retry Reader'}</button>`:''}${item.url?`<a class="button primary link-button" href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">Open original page ↗</a>`:''}</div></div>`;
+  d.innerHTML = `<div class="dialog-inner"><div class="dialog-head"><div><div class="eyebrow">${escapeHtml(item.type)}</div><h2>${escapeHtml(item.title)}</h2></div><div class="reader-head-actions">${reader?`<button class="reader-aa-button" type="button" data-reader-settings-toggle aria-label="Reader appearance" aria-expanded="false">Aa</button>`:''}<button class="icon-button" data-close aria-label="Close">×</button></div></div><p class="meta">${escapeHtml(item.source || sourceFromUrl(item.url))} · ${fmtDate(item.savedAt)}</p>${item.status?`<div class="pills"><span class="pill strong">${escapeHtml(item.status)}</span>${(item.tags||[]).map(t=>`<span class="pill">${escapeHtml(t)}</span>`).join('')}</div>`:''}${item.selectedText?`<div class="card quote-card"><p>${escapeHtml(item.selectedText)}</p></div>`:''}${item.note?`<div class="card"><div class="kicker">Note</div>${escapeHtml(item.note)}</div>`:''}${articleNotice}${reader}${item.screenshotState==='pending'?`<div class="notice">Full-page screenshot capture is queued for the hosted capture service, where it will be compressed before upload.</div>`:''}<div class="dialog-actions">${bucket?`<button class="button danger" data-trash-saved>Move to Trash</button>`:''}${item.readStatus?`<button class="button secondary" data-toggle-read>${item.readStatus==='Read'?'Mark unread':'Mark read'}</button>`:''}${item.type==='Article'?`<button class="button secondary" data-retry-reader>${item.articleState==='ready'?'Refresh Reader':'Retry Reader'}</button>`:''}${item.url?`<a class="button primary link-button" href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">Open original page ↗</a>`:''}</div></div>`;
   d.querySelector('[data-close]').addEventListener('click',()=>d.close());
   d.querySelector('[data-toggle-read]')?.addEventListener('click',()=>{item.readStatus=item.readStatus==='Read'?'Unread':'Read'; saveState(); d.close(); render();});
   d.querySelector('[data-retry-reader]')?.addEventListener('click',()=>{d.close(); processArticleCapture(item);});
+  d.querySelector('[data-trash-saved]')?.addEventListener('click',()=>{ if(moveSavedToTrash(bucket,item.id)) d.close(); });
   d.showModal();
+  if (reader) bindDialogBackdropClose(d); else unbindDialogBackdropClose(d);
   bindReaderControls(d);
   d.querySelectorAll('.reader-article img:not([data-media-path])').forEach(img=>{
     img.addEventListener('error',()=>img.remove(), { once:true });
@@ -903,7 +1045,7 @@ function handleInbox(action,id) {
     state.library.unshift({...item, readStatus:item.type==='Article'?(item.readStatus||'Unread'):'', articleState:item.type==='Article'?(item.articleState||'pending'):undefined});
     state.inbox=state.inbox.filter(x=>x.id!==id); saveState(); render();
   }
-  if(action==='discard') { state.inbox=state.inbox.filter(x=>x.id!==id); saveState(); render(); }
+  if(action==='discard') moveSavedToTrash('inbox',id,{confirmFirst:false});
   if(action==='open') openSaved(item);
 }
 
@@ -1018,12 +1160,8 @@ document.getElementById('watchTags').addEventListener('input',renderTagQuickPick
 document.getElementById('cancelWatchEdit').addEventListener('click',()=>watchEditorDialog.close());
 document.getElementById('deleteWatch').addEventListener('click',()=>{
   const id=document.getElementById('watchEditId').value; if(!id) return;
-  const w=state.watches.find(x=>x.id===id); if(!w) return;
-  if(!confirm(`Delete ${brandName(w.brandId)} ${w.model} from Ticking?`)) return;
-  state.watches=state.watches.filter(x=>x.id!==id);
-  state.myWatches=state.myWatches.filter(x=>x.watchId!==id);
-  for (const item of [...state.inbox,...state.library]) if(item.watchId===id) item.watchId=null;
-  saveState(); watchEditorDialog.close(); currentView='Watches'; render();
+  if(!moveWatchToTrash(id)) return;
+  watchEditorDialog.close(); setCurrentView('Watches'); render();
 });
 
 function openOwnershipEditor(watchId) {
