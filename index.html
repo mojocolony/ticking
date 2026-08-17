@@ -15,15 +15,43 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="app-shell">
+  <div id="authGate" class="auth-gate" aria-live="polite">
+    <div class="auth-card">
+      <div class="auth-identity">
+        <div class="auth-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" class="lucide-watch"><path d="M12 10v2.2l1.6 1m2.53-5.54-.81-4.05a2 2 0 0 0-2-1.61h-2.68a2 2 0 0 0-2 1.61l-.78 4.05m.02 8.7.8 4a2 2 0 0 0 2 1.61h2.72a2 2 0 0 0 2-1.61l.81-4.05"/><circle cx="12" cy="12" r="6"/></svg>
+        </div>
+        <div>
+          <div class="auth-title">Ticking</div>
+          <div class="auth-subtitle">Private watch research desk</div>
+        </div>
+      </div>
+
+      <div id="authChecking" class="auth-checking">Checking secure session…</div>
+
+      <form id="authForm" class="auth-form hidden">
+        <div id="authMessage" class="notice hidden"></div>
+        <label>Email
+          <input id="authEmail" type="email" autocomplete="email" inputmode="email" placeholder="Email" required />
+        </label>
+        <label>Password
+          <input id="authPassword" type="password" autocomplete="current-password" placeholder="Password" required />
+        </label>
+        <button type="submit" class="button primary auth-submit" id="authSignIn">Sign in</button>
+      </form>
+    </div>
+    <div class="auth-build">Ticking · 0.3.17</div>
+  </div>
+
+  <div id="appShell" class="app-shell hidden">
     <aside class="sidebar">
       <div class="brand-block">
         <div class="brand-mark" aria-hidden="true">
-          <img src="icon-192.png" alt="" />
+          <svg viewBox="0 0 24 24" class="lucide-watch"><path d="M12 10v2.2l1.6 1m2.53-5.54-.81-4.05a2 2 0 0 0-2-1.61h-2.68a2 2 0 0 0-2 1.61l-.78 4.05m.02 8.7.8 4a2 2 0 0 0 2 1.61h2.72a2 2 0 0 0 2-1.61l.81-4.05"/><circle cx="12" cy="12" r="6"/></svg>
         </div>
         <div>
           <div class="brand-name">Ticking</div>
-          <div class="build">prototype 0.3.18</div>
+          <div class="build">prototype 0.3.17</div>
         </div>
       </div>
 
@@ -298,37 +326,9 @@
         <button value="cancel" class="icon-button" aria-label="Close">×</button>
       </div>
 
-      <div id="cloudMessage" class="notice">Ticking is currently using local browser storage.</div>
+      <div id="cloudMessage" class="notice">Your Ticking data is private to this signed-in account.</div>
 
-      <label>Project URL
-        <input id="cloudUrl" type="url" placeholder="https://your-project.supabase.co" />
-      </label>
-      <label>Publishable key
-        <input id="cloudKey" type="password" autocomplete="off" placeholder="sb_publishable_…" />
-        <span class="field-help">Use the publishable key from the Supabase Connect dialog, never a secret/service-role key.</span>
-      </label>
-      <div class="dialog-actions">
-        <button type="button" class="button secondary" id="saveCloudConfig">Save connection</button>
-      </div>
-
-      <hr class="dialog-rule" />
-
-      <div id="cloudAuthLoggedOut">
-        <div class="grid two">
-          <label>Email
-            <input id="cloudEmail" type="email" autocomplete="email" placeholder="you@example.com" />
-          </label>
-          <label>Password
-            <input id="cloudPassword" type="password" autocomplete="current-password" placeholder="Password" />
-          </label>
-        </div>
-        <div class="dialog-actions">
-          <button type="button" class="button secondary" id="cloudSignUp">Create account</button>
-          <button type="button" class="button primary" id="cloudSignIn">Sign in</button>
-        </div>
-      </div>
-
-      <div id="cloudAuthLoggedIn" class="hidden">
+      <div id="cloudAuthLoggedIn">
         <div class="card cloud-account">
           <div class="kicker">Signed in</div>
           <div id="cloudAccountEmail" class="title"></div>

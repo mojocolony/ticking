@@ -1,49 +1,17 @@
 const STORAGE_KEY = 'ticking.prototype.v1';
-const CURRENT_VERSION = '0.3.18';
+const CURRENT_VERSION = '0.3.17';
 
 const seed = {
   settings: { version: CURRENT_VERSION, readerFont: 'Lora', readerCustomFont: '', readerSize: 18, readerBackground: 'paper', readerWidth: 720, readerMargin: 24, readerLineHeight: 1.7 },
-  dailySites: [
-    { name: 'Fratello', url: 'https://www.fratellowatches.com/' },
-    { name: 'Monochrome', url: 'https://monochrome-watches.com/' },
-    { name: 'Worn & Wound', url: 'https://wornandwound.com/' },
-    { name: 'Hodinkee', url: 'https://www.hodinkee.com/' },
-    { name: 'Time+Tide', url: 'https://timeandtidewatches.com/' }
-  ],
-  brands: [
-    { id: 'b1', name: 'Serica', country: 'France', website: 'https://www.serica-watches.com/', status: 'Follow' },
-    { id: 'b2', name: 'Traska', country: 'United States', website: 'https://www.traskawatch.com/', status: 'Interesting' },
-    { id: 'b3', name: 'Sinn', country: 'Germany', website: 'https://www.sinn.de/en/', status: 'Follow' }
-  ],
-  watches: [
-    { id: 'w1', brandId: 'b1', model: '6190', variant: 'Commando', referenceNumber: '', type: ['Field'], complications: ['Time only'], movement: 'Soprod', diameter: 37.7, thickness: 10.4, lugToLug: null, lugWidth: null, waterResistance: 200, material: 'Stainless Steel', crystal: 'Sapphire', price: 990, currency: 'EUR', statuses: ['Interested', 'See in Person'], tags: ['Field', 'Design reference'], note: 'Strong proportions and restrained typography.', officialUrl: 'https://www.serica-watches.com/' },
-    { id: 'w2', brandId: 'b2', model: 'Venturer', variant: 'Bottle Green', referenceNumber: '', type: ['GMT', 'Field'], complications: ['GMT', 'Date'], movement: 'Miyota 9075', diameter: 38.5, thickness: 10, lugToLug: 46, lugWidth: 20, waterResistance: 150, material: 'Stainless Steel', crystal: 'Sapphire', price: 720, currency: 'USD', statuses: ['Consider Buying', 'Watching'], tags: ['GMT', 'Under $2,000'], note: 'Excellent everyday proportions. Compare bracelet and clasp in person.', officialUrl: 'https://www.traskawatch.com/' },
-    { id: 'w3', brandId: 'b3', model: '556 I', variant: 'Black', referenceNumber: '', type: ['Pilot', 'Tool'], complications: ['Date'], movement: 'Sellita SW200-1', diameter: 38.5, thickness: 11, lugToLug: 45.7, lugWidth: 20, waterResistance: 200, material: 'Stainless Steel', crystal: 'Sapphire', price: 1990, currency: 'CAD', statuses: ['Owned'], tags: ['Tool watch'], note: 'Collection anchor.', officialUrl: 'https://www.sinn.de/en/' }
-  ],
-  myWatches: [
-    { id: 'mw1', watchId: 'w3', purchaseDate: '2025-03-11', purchasePrice: 1750, currency: 'CAD', seller: 'Local dealer', box: true, papers: true, currentStrap: 'Bracelet', notes: 'Keeps excellent time.' }
-  ],
-  releases: [
-    { id: 'r1', brandId: 'b2', title: 'Venturer GMT refresh', announcementDate: '2026-08-12', saleDate: '2026-08-22', type: 'Collection refresh', price: 720, currency: 'USD', status: 'Watching' },
-    { id: 'r2', brandId: 'b1', title: 'New 6190 variant', announcementDate: '2026-08-09', saleDate: '2026-09-05', type: 'New colourway', price: 990, currency: 'EUR', status: 'Interested' }
-  ],
-  inbox: [
-    { id: 'i1', type: 'Link', title: 'Hands-on with a compact GMT', url: 'https://example.com/compact-gmt', source: 'example.com', savedAt: '2026-08-16T13:24:00-04:00', status: 'Interested', tags: ['GMT'], note: '' },
-    { id: 'i2', type: 'Reference', title: 'Interesting pilot handset', url: 'https://example.com/pilot-hands', source: 'example.com', savedAt: '2026-08-15T20:10:00-04:00', status: '', tags: ['Hands', 'Design reference'], note: 'Worth revisiting for legibility.' }
-  ],
-  library: [
-    { id: 'l1', type: 'Article', title: 'Why 38 mm tool watches work so well', url: 'https://example.com/38mm-tool-watches', source: 'example.com', savedAt: '2026-08-14T09:15:00-04:00', readStatus: 'Unread', tags: ['Proportions', 'Tool watch'], articleState: 'ready' },
-    { id: 'l2', type: 'Snippet', title: 'Miyota 9075 notes', url: 'https://example.com/miyota-9075', source: 'example.com', savedAt: '2026-08-13T18:30:00-04:00', readStatus: '', tags: ['GMT', 'Movement'], selectedText: 'Traveller GMT functionality is the key reason this movement is interesting.' }
-  ],
-  collections: [
-    { id: 'c1', name: 'Possible Next Watch', description: 'Serious candidates worth revisiting.', itemCount: 4 },
-    { id: 'c2', name: 'Great Dial Designs', description: 'Typography, colour and layout references.', itemCount: 11 },
-    { id: 'c3', name: 'Tanager Research', description: 'Useful references for a utilitarian, design-forward tool watch.', itemCount: 18 }
-  ],
-  reminders: [
-    { id: 'rm1', date: '2026-08-22', text: 'Check Venturer availability and Canadian landed cost.', target: 'Traska Venturer', done: false },
-    { id: 'rm2', date: '2026-10-18', text: 'Try the Serica 6190 in person.', target: 'Toronto watch show', done: false }
-  ],
+  dailySites: [],
+  brands: [],
+  watches: [],
+  myWatches: [],
+  releases: [],
+  inbox: [],
+  library: [],
+  collections: [],
+  reminders: [],
   trash: [],
   lookup: {
     statuses: ['Interested', 'Researching', 'Consider Buying', 'See in Person', 'Watching', 'Owned', 'Formerly Owned', 'Not for Me'],
@@ -55,7 +23,6 @@ const seed = {
     tags: ['GMT', 'Field', 'Pilot', 'Ceramic', 'Great handset', 'Design reference', 'Tool watch', 'Under $2,000', 'Movement', 'Proportions']
   }
 };
-
 function clone(v) { return JSON.parse(JSON.stringify(v)); }
 const READER_FONTS = [
   { value: 'Lora', label: 'Lora', stack: "'Lora', Georgia, serif" },
@@ -220,7 +187,7 @@ function mergeIncomingState(saved) {
 }
 let state = loadState();
 
-const CLOUD_CONFIG_KEY = 'ticking.supabase.config';
+const CLOUD_CONFIG_KEY = 'ticking.supabase.config'; // legacy key; ignored from 0.3.17 onward
 const DEFAULT_CLOUD_CONFIG = {
   url: 'https://appesztafatypbxzdunr.supabase.co',
   key: 'sb_publishable_70RugEcKQxZWUa5eQfmyeg_y7AkVz9V'
@@ -236,14 +203,40 @@ const cloud = {
 };
 
 function getCloudConfig() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(CLOUD_CONFIG_KEY) || '{}');
-    return { ...DEFAULT_CLOUD_CONFIG, ...saved };
-  } catch { return { ...DEFAULT_CLOUD_CONFIG }; }
+  // Ticking is a private single-project app. The publishable client key is safe to ship
+  // in browser code; access to data remains protected by Supabase Auth + RLS.
+  return { ...DEFAULT_CLOUD_CONFIG };
 }
-function setCloudConfig(url, key) {
-  localStorage.setItem(CLOUD_CONFIG_KEY, JSON.stringify({ url: url.trim().replace(/\/$/,''), key: key.trim() }));
+function setAuthMessage(message='', kind='') {
+  const el = document.getElementById('authMessage');
+  if (!el) return;
+  el.textContent = message;
+  el.classList.toggle('hidden', !message);
+  el.classList.toggle('warning', kind === 'warning');
 }
+function showAuthGate(message='') {
+  document.getElementById('appShell')?.classList.add('hidden');
+  document.getElementById('authGate')?.classList.remove('hidden');
+  document.getElementById('authChecking')?.classList.add('hidden');
+  document.getElementById('authForm')?.classList.remove('hidden');
+  setAuthMessage(message, message ? 'warning' : '');
+}
+function showAuthChecking(message='Checking secure session…') {
+  document.getElementById('appShell')?.classList.add('hidden');
+  document.getElementById('authGate')?.classList.remove('hidden');
+  const checking = document.getElementById('authChecking');
+  if (checking) { checking.textContent = message; checking.classList.remove('hidden'); }
+  document.getElementById('authForm')?.classList.add('hidden');
+  setAuthMessage('');
+}
+function showPrivateApp() {
+  document.getElementById('authGate')?.classList.add('hidden');
+  document.getElementById('appShell')?.classList.remove('hidden');
+  render();
+  refreshDatalists();
+  checkCaptureQuery();
+}
+
 function cloudConfigured() {
   const cfg = getCloudConfig();
   return !!(cfg.url && cfg.key);
@@ -265,41 +258,65 @@ function updateCloudUI(message='') {
   if (statusBtn) statusBtn.textContent = cloudLabel();
   const mobileStatusBtn = document.getElementById('cloudStatusMobile');
   if (mobileStatusBtn) mobileStatusBtn.textContent = cloud.user ? 'Cloud ✓' : 'Cloud';
-  const loggedOut = document.getElementById('cloudAuthLoggedOut');
-  const loggedIn = document.getElementById('cloudAuthLoggedIn');
-  loggedOut?.classList.toggle('hidden', !!cloud.user);
-  loggedIn?.classList.toggle('hidden', !cloud.user);
   const email = document.getElementById('cloudAccountEmail');
   if (email) email.textContent = cloud.user?.email || '';
   const sync = document.getElementById('cloudLastSync');
   if (sync) sync.textContent = cloud.lastSync ? `Last synced ${new Intl.DateTimeFormat('en-CA',{hour:'numeric',minute:'2-digit',month:'short',day:'numeric'}).format(cloud.lastSync)}` : 'Not synced yet';
   const msg = document.getElementById('cloudMessage');
-  if (msg) msg.textContent = message || (cloud.user ? 'Your Ticking data is private to this signed-in account.' : cloudConfigured() ? 'Connection saved. Sign in to enable private cloud sync.' : 'Ticking is currently using local browser storage.');
+  if (msg) msg.textContent = message || (cloud.user ? 'Your Ticking data is private to this signed-in account.' : 'Sign in to access your private Ticking data.');
 }
 async function initCloud({ load=true }={}) {
   cloud.initialized = true;
+  showAuthChecking();
+  // Remove any obsolete per-device connection override so a stale/incorrect key can
+  // never replace the app's built-in project configuration.
+  localStorage.removeItem(CLOUD_CONFIG_KEY);
   const cfg = getCloudConfig();
-  if (!cfg.url || !cfg.key || !window.supabase?.createClient) { updateCloudUI(); return false; }
+  if (!cfg.url || !cfg.key || !window.supabase?.createClient) {
+    updateCloudUI();
+    showAuthGate('Ticking Cloud could not start. Check your internet connection and reload.');
+    return false;
+  }
   try {
     cloud.client = window.supabase.createClient(cfg.url, cfg.key, {
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
     });
-    const { data, error } = await cloud.client.auth.getUser();
-    if (error && !String(error.message||'').toLowerCase().includes('session')) throw error;
-    cloud.user = data?.user || null;
+
+    const { data: sessionData } = await cloud.client.auth.getSession();
+    cloud.user = null;
+    if (sessionData?.session) {
+      // Verify a persisted browser session with Supabase before revealing the
+      // private application shell. A locally cached session alone is not enough.
+      const { data: userData, error: userError } = await cloud.client.auth.getUser();
+      if (!userError) cloud.user = userData?.user || null;
+    }
+
     cloud.client.auth.onAuthStateChange((event, session) => {
       cloud.user = session?.user || null;
       updateCloudUI();
-      if (cloud.user && event === 'SIGNED_IN') closeCloudDialog();
-      if (cloud.user && event !== 'INITIAL_SESSION') setTimeout(()=>loadCloudState({ createIfMissing:true, quiet:true }), 0);
+      if (event === 'SIGNED_OUT') showAuthGate('Signed out.');
     });
+
     updateCloudUI();
-    if (load && cloud.user) await loadCloudState({ createIfMissing:true, quiet:true });
+    if (!cloud.user) {
+      showAuthGate();
+      return true;
+    }
+
+    if (load) {
+      const loaded = await loadCloudState({ createIfMissing:true, quiet:true });
+      if (!loaded) {
+        showAuthGate('Signed in, but Ticking could not load your private data. Check your connection and try again.');
+        return false;
+      }
+    }
+    showPrivateApp();
     return true;
   } catch (error) {
     cloud.lastError = error;
     cloud.client = null; cloud.user = null;
     updateCloudUI(`Cloud connection error: ${error.message || error}`);
+    showAuthGate(`Ticking Cloud connection error: ${error.message || error}`);
     return false;
   }
 }
@@ -344,34 +361,42 @@ async function loadCloudState({ createIfMissing=false, quiet=false }={}) {
   }
 }
 async function signInCloud() {
-  if (!cloud.client) { alert('Save your Supabase Project URL and publishable key first.'); return; }
-  const email = document.getElementById('cloudEmail').value.trim();
-  const password = document.getElementById('cloudPassword').value;
-  if (!email || !password) { alert('Enter your email and password.'); return; }
-  const { data, error } = await cloud.client.auth.signInWithPassword({ email, password });
-  if (error) { updateCloudUI(`Sign-in failed: ${error.message}`); return; }
-  cloud.user = data.user; updateCloudUI('Signed in. Loading your Ticking data…');
-  document.getElementById('cloudPassword').value = '';
-  closeCloudDialog();
-  await loadCloudState({ createIfMissing:true, quiet:true });
-}
-async function signUpCloud() {
-  if (!cloud.client) { alert('Save your Supabase Project URL and publishable key first.'); return; }
-  const email = document.getElementById('cloudEmail').value.trim();
-  const password = document.getElementById('cloudPassword').value;
-  if (!email || !password) { alert('Enter an email and password.'); return; }
-  const { data, error } = await cloud.client.auth.signUp({ email, password });
-  if (error) { updateCloudUI(`Account creation failed: ${error.message}`); return; }
-  if (data.session) {
-    cloud.user = data.user; updateCloudUI('Account created and signed in.');
-    document.getElementById('cloudPassword').value = '';
-    closeCloudDialog();
-    await loadCloudState({ createIfMissing:true, quiet:true });
-  } else updateCloudUI('Account created. Check your email to confirm it, then sign in.');
+  if (!cloud.client) {
+    setAuthMessage('Ticking Cloud is not available. Reload the page and try again.', 'warning');
+    return;
+  }
+  const email = document.getElementById('authEmail')?.value.trim() || '';
+  const password = document.getElementById('authPassword')?.value || '';
+  if (!email || !password) { setAuthMessage('Enter your email and password.', 'warning'); return; }
+
+  const button = document.getElementById('authSignIn');
+  if (button) { button.disabled = true; button.textContent = 'Signing in…'; }
+  setAuthMessage('');
+  try {
+    const { data, error } = await cloud.client.auth.signInWithPassword({ email, password });
+    if (error) { setAuthMessage(`Sign-in failed: ${error.message}`, 'warning'); return; }
+    cloud.user = data.user;
+    updateCloudUI('Signed in. Loading your Ticking data…');
+    const passwordInput = document.getElementById('authPassword');
+    if (passwordInput) passwordInput.value = '';
+    showAuthChecking('Loading your private Ticking data…');
+    const loaded = await loadCloudState({ createIfMissing:true, quiet:true });
+    if (!loaded) {
+      showAuthGate('Signed in, but Ticking could not load your private data. Check your connection and try again.');
+      return;
+    }
+    showPrivateApp();
+  } finally {
+    if (button) { button.disabled = false; button.textContent = 'Sign in'; }
+  }
 }
 async function signOutCloud() {
+  closeCloudDialog();
+  showAuthChecking('Signing out…');
   if (cloud.client) await cloud.client.auth.signOut();
-  cloud.user = null; cloud.lastSync = null; updateCloudUI('Signed out. Local browser data is still available.');
+  cloud.user = null; cloud.lastSync = null; cloud.lastError = null;
+  updateCloudUI('Signed out.');
+  showAuthGate('Signed out.');
 }
 async function compressImageFile(file, { maxWidth=2200, quality=.84 }={}) {
   if (!file?.type?.startsWith('image/')) return file;
@@ -600,21 +625,24 @@ async function processArticleCapture(item) {
 function setupCloudUI() {
   const d = document.getElementById('cloudDialog');
   const openCloudDialog = ()=>{
-    const cfg=getCloudConfig(); document.getElementById('cloudUrl').value=cfg.url||''; document.getElementById('cloudKey').value=cfg.key||''; updateCloudUI(); d.showModal(); if (cloudReady()) refreshStorageUsage();
+    updateCloudUI();
+    d.showModal();
+    if (cloudReady()) refreshStorageUsage();
   };
   document.getElementById('cloudStatus')?.addEventListener('click',openCloudDialog);
   document.getElementById('cloudStatusMobile')?.addEventListener('click',openCloudDialog);
-  document.getElementById('saveCloudConfig')?.addEventListener('click',async()=>{
-    setCloudConfig(document.getElementById('cloudUrl').value, document.getElementById('cloudKey').value);
-    cloud.client=null; cloud.user=null; updateCloudUI('Connecting…'); await initCloud({load:true});
-  });
-  document.getElementById('cloudSignIn')?.addEventListener('click',signInCloud);
-  document.getElementById('cloudSignUp')?.addEventListener('click',signUpCloud);
   document.getElementById('cloudSignOut')?.addEventListener('click',signOutCloud);
   document.getElementById('refreshStorageUsage')?.addEventListener('click',refreshStorageUsage);
   document.getElementById('cloudSync')?.addEventListener('click',()=>cloudSaveNow({quiet:false}));
   document.getElementById('cloudLoad')?.addEventListener('click',async()=>{
     if (confirm('Load the Supabase copy and replace this browser’s current Ticking data?')) await loadCloudState({quiet:false});
+  });
+}
+
+function setupAuthGate() {
+  document.getElementById('authForm')?.addEventListener('submit', (event)=>{
+    event.preventDefault();
+    signInCloud();
   });
 }
 
@@ -1448,7 +1476,5 @@ function checkCaptureQuery() {
 }
 
 setupCloudUI();
-refreshDatalists();
-render();
-checkCaptureQuery();
+setupAuthGate();
 initCloud({load:true});

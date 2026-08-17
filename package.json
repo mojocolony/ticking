@@ -1,0 +1,9 @@
+{
+  "name": "ticking-v1",
+  "version": "0.3.17",
+  "private": true,
+  "description": "Ticking watch research app prototype",
+  "scripts": {
+    "serve": "python3 -m http.server 8080"
+  }
+}

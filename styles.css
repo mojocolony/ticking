@@ -34,10 +34,55 @@ button { cursor: pointer; }
 a { color: inherit; }
 
 .app-shell { min-height: 100vh; display: grid; grid-template-columns: 230px 1fr; }
+
+/* 0.3.17: authenticated private shell */
+.auth-gate {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 18px;
+  padding: 28px 18px calc(28px + env(safe-area-inset-bottom));
+  background: var(--bg);
+}
+.auth-card {
+  width: min(430px, 100%);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: 26px;
+}
+.auth-identity { display: flex; align-items: center; gap: 14px; margin-bottom: 26px; }
+.auth-mark {
+  width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center;
+  background: var(--accent); color: var(--accent-text); flex: 0 0 auto;
+}
+.auth-mark svg { width: 29px; height: 29px; }
+.auth-title { font-size: 28px; font-weight: 760; letter-spacing: -.035em; line-height: 1; }
+.auth-subtitle { color: var(--muted); font-size: 13px; margin-top: 6px; }
+.auth-checking { color: var(--muted); font-size: 14px; padding: 8px 0 2px; }
+.auth-form { display: grid; gap: 14px; }
+.auth-form label { display: grid; gap: 7px; color: var(--muted); font-size: 12px; }
+.auth-form input {
+  width: 100%; border: 1px solid var(--line); border-radius: 11px; background: var(--bg); color: var(--text);
+  padding: 12px 13px; outline: none; font-size: 16px;
+}
+.auth-form input:focus { border-color: var(--muted); }
+.auth-form .notice { margin: 0; }
+.auth-submit { width: 100%; min-height: 46px; margin-top: 2px; }
+.auth-submit:disabled { opacity: .65; cursor: wait; }
+.auth-build { color: var(--muted); font-size: 11px; }
+
+@media (max-width: 650px) {
+  .auth-gate { place-items: stretch; align-content: center; padding-left: 16px; padding-right: 16px; }
+  .auth-card { width: 100%; padding: 22px; border-radius: 18px; }
+  .auth-title { font-size: 27px; }
+}
 .sidebar { position: sticky; top: 0; height: 100vh; border-right: 1px solid var(--line); padding: 22px 16px 16px; display: flex; flex-direction: column; background: var(--surface); }
 .brand-block { display: flex; align-items: center; gap: 11px; padding: 0 6px 22px; }
-.brand-mark { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; overflow: hidden; background: transparent; }
-.brand-mark img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.brand-mark { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--accent); color: var(--accent-text); }
+.brand-mark svg { width: 23px; height: 23px; }
 .lucide-watch, .watch-glyph { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .brand-name { font-size: 18px; font-weight: 700; letter-spacing: -.02em; }
 .build { color: var(--muted); font-size: 11px; margin-top: 2px; }
